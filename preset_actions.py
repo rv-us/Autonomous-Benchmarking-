@@ -56,7 +56,7 @@ def circle(car):
     car.set_dir_servo_angle(30)
     sleep(0.1)
     car.forward(30)
-    sleep(1.5) 
+    sleep(5) 
     car.stop()
     sleep(0.1)
     car.set_dir_servo_angle(0)
@@ -274,7 +274,7 @@ actions_dict = {
     "celebrate": celebrate,
     "depressed": depressed,
     "headbutt": headbutt,
-    "run away": run_away,
+    "run_away": run_away,
     "circle": circle,
 }
 
