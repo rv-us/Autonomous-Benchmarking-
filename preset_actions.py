@@ -51,12 +51,18 @@ def run_away(car):
 
 def circle(car):
     car.reset()
+    car.set_cam_tilt_angle(10)
+    sleep(0.1)
     car.set_dir_servo_angle(30)
+    sleep(0.1)
     car.forward(30)
-    sleep(1.5)  # Adjust time to complete a circle
+    sleep(1.5) 
     car.stop()
+    sleep(0.1)
     car.set_dir_servo_angle(0)
-
+    sleep(0.1)
+    car.set_cam_tilt_angle(0)
+    sleep(0.1)
 
 def act_cute(car):
     car.reset()
