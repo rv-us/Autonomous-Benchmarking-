@@ -29,6 +29,35 @@ def resist(car):
     car.set_dir_servo_angle(0)
     car.set_cam_pan_angle(0)
 
+def headbutt(car):
+    car.reset()
+    car.set_cam_tilt_angle(-25)
+    sleep(0.2)
+    car.forward(30)
+    sleep(0.5)
+    car.stop()
+    car.set_cam_tilt_angle(0)
+
+def run_away(car):
+    car.reset()
+    for _ in range(4):
+        car.set_dir_servo_angle(-20)
+        car.backward(30)
+        sleep(0.2)
+        car.set_dir_servo_angle(20)
+        sleep(0.2)
+    car.stop()
+    car.set_dir_servo_angle(0)
+
+def circle(car):
+    car.reset()
+    car.set_dir_servo_angle(30)
+    car.forward(30)
+    sleep(1.5)  # Adjust time to complete a circle
+    car.stop()
+    car.set_dir_servo_angle(0)
+
+
 def act_cute(car):
     car.reset()
     car.set_cam_tilt_angle(-20)
@@ -238,6 +267,9 @@ actions_dict = {
     "twist body": twist_body,
     "celebrate": celebrate,
     "depressed": depressed,
+    "headbutt": headbutt,
+    "run away": run_away,
+    "circle": circle,
 }
 
 sounds_dict = {
