@@ -10,7 +10,8 @@ References:
 
 from picarx import Picarx
 from robot_hat import Music
-from robot_hat import Ultrasonic, GrayscaleModule
+from robot_hat import Ultrasonic
+from robot_hat.sensor import GrayscaleSensor
 import time
 import os
 from typing import List, Optional
@@ -37,12 +38,12 @@ def get_ultrasonic() -> Ultrasonic:
         _ultrasonic = Ultrasonic("D2", "D3")
     return _ultrasonic
 
-gray_module = None
-def get_grayscale() -> GrayscaleModule:
-    global gray_module
-    if gray_module is None:
-        gray_module = GrayscaleModule("A0", "A1", "A2")
-    return gray_module
+gray_sensor = None
+def get_grayscale_sensor() -> GrayscaleSensor:
+    global gray_sensor
+    if gray_sensor is None:
+        gray_sensor = GrayscaleSensor("A0", "A1", "A2")
+    return gray_sensor
 
 # --- Servo Functions ---
 def set_steering(angle: float) -> None:
@@ -110,7 +111,7 @@ def get_ultrasound() -> float:
 
 def get_grayscale() -> List[int]:
     """Return list of grayscale sensor readings (0-100, left to right)."""
-    gs = get_grayscale()
+    gs = get_grayscale_sensor()
     return gs.read()
 
 # --- Camera Function ---
