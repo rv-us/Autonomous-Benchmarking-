@@ -140,6 +140,66 @@ def play_sound(filename: str, volume: int = 100) -> None:
     else:
         print(f"Sound file not found: {filename}")
 
+# --- Additional Primitives from Examples ---
+def reset_servo(servo_id: int, angle: float = 0) -> None:
+    """
+    Set the specified servo to a given angle (default zero).
+    servo_id: 0-11 (see hardware mapping)
+    angle: angle to set (default 0)
+    """
+    from robot_hat import Servo
+    Servo(servo_id).angle(angle)
+
+def set_line_reference(refs: list) -> None:
+    """Set grayscale line reference values (list of 3 ints)."""
+    px = get_picarx()
+    px.set_line_reference(refs)
+
+def set_cliff_reference(refs: list) -> None:
+    """Set grayscale cliff reference values (list of 3 ints)."""
+    px = get_picarx()
+    px.set_cliff_reference(refs)
+
+def get_line_status(val_list: list) -> list:
+    """Get line status from grayscale values (returns [bool, bool, bool])."""
+    px = get_picarx()
+    return px.get_line_status(val_list)
+
+def get_cliff_status(val_list: list) -> bool:
+    """Get cliff status from grayscale values (returns True if cliff detected)."""
+    px = get_picarx()
+    return px.get_cliff_status(val_list)
+
+def camera_start(vflip: bool = False, hflip: bool = False) -> None:
+    """Start the camera with optional vertical/horizontal flip."""
+    from vilib import Vilib
+    Vilib.camera_start(vflip=vflip, hflip=hflip)
+
+def camera_display(local: bool = True, web: bool = True) -> None:
+    """Display the camera feed locally and/or on the web."""
+    from vilib import Vilib
+    Vilib.display(local=local, web=web)
+
+def color_detect(color: str) -> None:
+    """Start color detection for the specified color (e.g., 'red', 'blue')."""
+    from vilib import Vilib
+    Vilib.color_detect(color)
+
+def face_detect_switch(flag: bool) -> None:
+    """Enable or disable face detection."""
+    from vilib import Vilib
+    Vilib.face_detect_switch(flag)
+
+def qrcode_detect_switch(flag: bool) -> None:
+    """Enable or disable QR code detection."""
+    from vilib import Vilib
+    Vilib.qrcode_detect_switch(flag)
+
+def take_photo(name: str, path: str) -> None:
+    """Take a photo and save it to the specified path with the given name."""
+    from vilib import Vilib
+    Vilib.take_photo(name, path)
+
 # --- Example Usage ---
 if __name__ == "__main__":
     print("Testing Picar-X primitives...")
