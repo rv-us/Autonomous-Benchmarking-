@@ -150,9 +150,9 @@ def play_sound(filename: str, volume: int = 100) -> None:
 # --- Example Usage ---
 if __name__ == "__main__":
     print("Testing Picar-X primitives...")
-    set_steering(0)
-    set_camera_pan(0)
-    set_camera_tilt(0)
+    set_dir_servo(0)
+    set_cam_pan_servo(0)
+    set_cam_tilt_servo(0)
     drive_forward(30, 1)
     turn_left(20, 30, 0.5)
     drive_backward(30, 1)
