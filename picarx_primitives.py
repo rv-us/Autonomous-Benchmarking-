@@ -30,13 +30,6 @@ def get_music() -> Music:
         _music = Music()
     return _music
 
-_ultrasonic = None
-def get_ultrasonic() -> Ultrasonic:
-    global _ultrasonic
-    if _ultrasonic is None:
-        _ultrasonic = Ultrasonic("D2", "D3")
-    return _ultrasonic
-
 # --- Servo and Motor Primitives ---
 def reset() -> None:
     """Reset all servos to 0 and stop the motors."""
@@ -115,8 +108,8 @@ def turn_right(angle: float, speed: int = 30, duration: Optional[float] = None) 
 # --- Sensor Functions ---
 def get_ultrasound() -> float:
     """Return distance in centimeters from the ultrasonic sensor."""
-    us = get_ultrasonic()
-    return us.read()
+    px = get_picarx()
+    return px.ultrasonic.read()
 
 def get_grayscale() -> list:
     """Return list of grayscale sensor readings (0-4095, left to right)."""
