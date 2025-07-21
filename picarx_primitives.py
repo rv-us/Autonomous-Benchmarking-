@@ -11,7 +11,6 @@ References:
 from picarx import Picarx
 from robot_hat import Music
 from robot_hat import Ultrasonic
-from robot_hat.sensor import GrayscaleSensor
 import time
 import os
 from typing import List, Optional
@@ -38,28 +37,38 @@ def get_ultrasonic() -> Ultrasonic:
         _ultrasonic = Ultrasonic("D2", "D3")
     return _ultrasonic
 
-gray_sensor = None
-def get_grayscale_sensor() -> GrayscaleSensor:
-    global gray_sensor
-    if gray_sensor is None:
-        gray_sensor = GrayscaleSensor("A0", "A1", "A2")
-    return gray_sensor
+# --- Servo and Motor Primitives ---
+def reset() -> None:
+    """Reset all servos to 0 and stop the motors."""
+    px = get_picarx()
+    px.set_dir_servo_angle(0)
+    px.set_cam_pan_angle(0)
+    px.set_cam_tilt_angle(0)
+    px.stop()
 
-# --- Servo Functions ---
-def set_steering(angle: float) -> None:
-    """Set the steering servo angle (degrees, -30 to 30 typical)."""
+def set_dir_servo(angle: float) -> None:
+    """Set the direction (steering) servo angle (-30 to 30 typical)."""
     px = get_picarx()
     px.set_dir_servo_angle(angle)
 
-def set_camera_pan(angle: float) -> None:
-    """Set the camera pan servo angle (degrees, -35 to 35 typical)."""
+def set_cam_pan_servo(angle: float) -> None:
+    """Set the camera pan servo angle (-35 to 35 typical)."""
     px = get_picarx()
     px.set_cam_pan_angle(angle)
 
-def set_camera_tilt(angle: float) -> None:
-    """Set the camera tilt servo angle (degrees, -35 to 35 typical)."""
+def set_cam_tilt_servo(angle: float) -> None:
+    """Set the camera tilt servo angle (-35 to 35 typical)."""
     px = get_picarx()
     px.set_cam_tilt_angle(angle)
+
+def set_motor_speed(motor_id: int, speed: int) -> None:
+    """
+    Set the speed of an individual motor.
+    motor_id: 1 (left), 2 (right)
+    speed: -100 to 100
+    """
+    px = get_picarx()
+    px.set_motor_speed(motor_id, speed)
 
 # --- Motor Functions ---
 def drive_forward(speed: int, duration: Optional[float] = None) -> None:
@@ -109,10 +118,10 @@ def get_ultrasound() -> float:
     us = get_ultrasonic()
     return us.read()
 
-def get_grayscale() -> List[int]:
-    """Return list of grayscale sensor readings (0-100, left to right)."""
-    gs = get_grayscale_sensor()
-    return gs.read()
+def get_grayscale() -> list:
+    """Return list of grayscale sensor readings (0-4095, left to right)."""
+    px = get_picarx()
+    return px.get_grayscale_data()
 
 # --- Camera Function ---
 def capture_image(filename: str = "img_capture.jpg") -> None:
