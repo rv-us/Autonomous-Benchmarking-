@@ -31,10 +31,10 @@ def main():
                 px.cali_dir_value = [-1, -1]
                 px.forward(speed)
             elif key == 'a':
-                steer_angle = max(-30, steer_angle - 10)
+                steer_angle = max(-20, steer_angle - 5)
                 px.set_dir_servo_angle(steer_angle)
             elif key == 'd':
-                steer_angle = min(30, steer_angle + 10)
+                steer_angle = min(20, steer_angle + 5)
                 px.set_dir_servo_angle(steer_angle)
             elif key == 'u':
                 tilt_angle = min(35, tilt_angle + 5)
