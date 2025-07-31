@@ -8,8 +8,7 @@ This agent uses the functions from picarx_primitives.py as tools.
 import os
 import sys
 from typing import List, Optional
-from agents import Agent, Runner
-from agents.tools import tool
+from agents import Agent, Runner, tool
 import time
 import json
 
