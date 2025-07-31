@@ -283,7 +283,7 @@ def create_advanced_agent():
     os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
     
     # Create a session for memory
-    session = SQLiteSession()
+    session = SQLiteSession(session_id="picarx_advanced_session")
     
     # Create the agent with tools and session
     agent = Agent(
