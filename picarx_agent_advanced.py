@@ -10,7 +10,7 @@ import sys
 from typing import List, Optional, Dict, Any
 from agents import Agent, Runner
 from agents import function_tool
-from agents.memory import Session
+from agents.memory import SQLiteSession
 import time
 import json
 import base64
@@ -283,7 +283,7 @@ def create_advanced_agent():
     os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
     
     # Create a session for memory
-    session = Session()
+    session = SQLiteSession()
     
     # Create the agent with tools and session
     agent = Agent(
