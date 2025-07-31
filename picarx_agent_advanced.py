@@ -9,7 +9,7 @@ import os
 import sys
 from typing import List, Optional, Dict, Any
 from agents import Agent, Runner
-from agents.tool import tool
+from agents import function_tool
 from agents.memory import Memory
 import time
 import json
@@ -86,7 +86,7 @@ class PicarXAdvancedAgent:
         self.current_step = 0
         self.task_history = []
         
-    @tool
+    @function_tool
     def reset_tool(self) -> str:
         """Reset all servos to 0 and stop the motors."""
         try:
@@ -95,7 +95,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error resetting robot: {str(e)}"
     
-    @tool
+    @function_tool
     def set_dir_servo_tool(self, angle: float) -> str:
         """Set the direction (steering) servo angle (-30 to 30 typical)."""
         try:
@@ -104,7 +104,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error setting direction servo: {str(e)}"
     
-    @tool
+    @function_tool
     def set_cam_pan_servo_tool(self, angle: float) -> str:
         """Set the camera pan servo angle (-35 to 35 typical)."""
         try:
@@ -113,7 +113,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error setting camera pan servo: {str(e)}"
     
-    @tool
+    @function_tool
     def set_cam_tilt_servo_tool(self, angle: float) -> str:
         """Set the camera tilt servo angle (-35 to 35 typical)."""
         try:
@@ -122,7 +122,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error setting camera tilt servo: {str(e)}"
     
-    @tool
+    @function_tool
     def set_motor_speed_tool(self, motor_id: int, speed: int) -> str:
         """Set the speed of an individual motor. motor_id: 1 (left), 2 (right), speed: -100 to 100."""
         try:
@@ -131,7 +131,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error setting motor speed: {str(e)}"
     
-    @tool
+    @function_tool
     def drive_forward_tool(self, speed: int, duration: Optional[float] = None) -> str:
         """Drive forward at given speed (0-100). If duration is set, drive for that many seconds then stop."""
         try:
@@ -143,7 +143,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error driving forward: {str(e)}"
     
-    @tool
+    @function_tool
     def drive_backward_tool(self, speed: int, duration: Optional[float] = None) -> str:
         """Drive backward at given speed (0-100). If duration is set, drive for that many seconds then stop."""
         try:
@@ -155,7 +155,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error driving backward: {str(e)}"
     
-    @tool
+    @function_tool
     def stop_tool(self) -> str:
         """Stop all motors."""
         try:
@@ -164,7 +164,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error stopping robot: {str(e)}"
     
-    @tool
+    @function_tool
     def turn_left_tool(self, angle: float, speed: int = 30, duration: Optional[float] = None) -> str:
         """Turn left by setting steering angle and driving forward. Optionally for a duration."""
         try:
@@ -176,7 +176,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error turning left: {str(e)}"
     
-    @tool
+    @function_tool
     def turn_right_tool(self, angle: float, speed: int = 30, duration: Optional[float] = None) -> str:
         """Turn right by setting steering angle and driving forward. Optionally for a duration."""
         try:
@@ -188,7 +188,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error turning right: {str(e)}"
     
-    @tool
+    @function_tool
     def get_ultrasound_tool(self) -> str:
         """Get distance in centimeters from the ultrasonic sensor."""
         try:
@@ -197,7 +197,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error getting ultrasound distance: {str(e)}"
     
-    @tool
+    @function_tool
     def get_grayscale_tool(self) -> str:
         """Get grayscale sensor readings (0-4095, left to right)."""
         try:
@@ -206,7 +206,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error getting grayscale values: {str(e)}"
     
-    @tool
+    @function_tool
     def capture_image_tool(self, filename: str = "img_capture.jpg") -> str:
         """Capture an image from the camera and save to filename. Requires Vilib to be running."""
         try:
@@ -215,7 +215,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error capturing image: {str(e)}"
     
-    @tool
+    @function_tool
     def analyze_image_tool(self, filename: str = "img_capture.jpg") -> str:
         """Analyze the captured image to identify obstacles, exits, paths, and objects."""
         try:
@@ -225,7 +225,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error analyzing image: {str(e)}"
     
-    @tool
+    @function_tool
     def play_sound_tool(self, filename: str, volume: int = 100) -> str:
         """Play a sound file through the robot's speaker."""
         try:
@@ -234,7 +234,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error playing sound: {str(e)}"
     
-    @tool
+    @function_tool
     def create_plan_tool(self, task_description: str) -> str:
         """Create a multi-step plan for a complex task."""
         try:
@@ -273,7 +273,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error creating plan: {str(e)}"
     
-    @tool
+    @function_tool
     def execute_plan_step_tool(self, step_number: Optional[int] = None) -> str:
         """Execute the next step in the current plan."""
         try:
@@ -316,7 +316,7 @@ class PicarXAdvancedAgent:
         except Exception as e:
             return f"Error executing plan step: {str(e)}"
     
-    @tool
+    @function_tool
     def get_task_status_tool(self) -> str:
         """Get the current status of the ongoing task."""
         try:
