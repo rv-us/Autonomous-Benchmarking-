@@ -278,14 +278,11 @@ def get_task_status_tool() -> str:
         return f"Error getting task status: {str(e)}"
 
 def create_advanced_agent():
-    """Create the advanced Picar-X agent with tools and session."""
+    """Create the advanced Picar-X agent with tools."""
     # Set the API key
     os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
     
-    # Create a session for memory
-    session = SQLiteSession(session_id="picarx_advanced_session")
-    
-    # Create the agent with tools and session
+    # Create the agent with tools
     agent = Agent(
         name="Picar-X Advanced Robot Controller",
         instructions="""You are an advanced robot controller that can perform complex, multi-step tasks.
@@ -327,8 +324,7 @@ def create_advanced_agent():
             create_plan_tool,
             execute_plan_step_tool,
             get_task_status_tool
-        ],
-        session=session
+        ]
     )
     return agent
 
