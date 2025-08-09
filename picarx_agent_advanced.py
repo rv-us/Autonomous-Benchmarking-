@@ -282,6 +282,12 @@ def create_advanced_agent():
     # Set the API key
     os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
     
+    # Create session for memory
+    session = SQLiteSession(
+        session_id="picarx_advanced_session",
+        db_path="picarx_advanced_memory.db"
+    )
+    
     # Create the agent with tools
     agent = Agent(
         name="Picar-X Advanced Robot Controller",
@@ -326,27 +332,27 @@ def create_advanced_agent():
             get_task_status_tool
         ]
     )
-    return agent
+    return agent, session
 
-def execute_long_form_task(agent, task_description: str) -> str:
+def execute_long_form_task(agent, session, task_description: str) -> str:
     """Execute a long-form task with planning and iteration."""
     try:
         # Create a plan
-        plan_result = Runner.run_sync(agent, f"Create a plan for: {task_description}")
+        plan_result = Runner.run_sync(agent, f"Create a plan for: {task_description}", session=session)
         print(f"Plan created: {plan_result.final_output}")
         
         # Execute the plan step by step
         while current_step < len(task_plan):
-            step_result = Runner.run_sync(agent, f"Execute the next step in the plan")
+            step_result = Runner.run_sync(agent, f"Execute the next step in the plan", session=session)
             print(f"Step {current_step + 1}: {step_result.final_output}")
             
             # Check if we need to adapt the plan
             if "obstacle" in step_result.final_output.lower() or "blocked" in step_result.final_output.lower():
-                adapt_result = Runner.run_sync(agent, "The path is blocked. Adapt the plan to find an alternative route.")
+                adapt_result = Runner.run_sync(agent, "The path is blocked. Adapt the plan to find an alternative route.", session=session)
                 print(f"Plan adapted: {adapt_result.final_output}")
         
         # Get final status
-        status_result = Runner.run_sync(agent, "Get the final task status")
+        status_result = Runner.run_sync(agent, "Get the final task status", session=session)
         return status_result.final_output
         
     except Exception as e:
@@ -360,14 +366,16 @@ def main():
         print("Please add your OpenAI API key to keys.py")
         sys.exit(1)
     
-    # Initialize the agent
-    agent = create_advanced_agent()
+    # Initialize the agent with session
+    agent, session = create_advanced_agent()
     
-    print("Advanced Picar-X Agent initialized!")
+    print("Advanced Picar-X Agent with Memory initialized!")
     print("Type 'quit' to exit")
     print("Type 'reset' to reset the robot")
     print("Type 'status' to check task status")
+    print("Type 'memory' to test memory functionality")
     print("Type 'escape room' for a complex task example")
+    print("Memory is enabled - I will remember our conversations!")
     print("-" * 50)
     
     try:
@@ -378,23 +386,27 @@ def main():
             if user_input.lower() == 'quit':
                 break
             elif user_input.lower() == 'reset':
-                result = Runner.run_sync(agent, "Reset the robot")
+                result = Runner.run_sync(agent, "Reset the robot", session=session)
                 print(f"Agent: {result.final_output}")
                 continue
             elif user_input.lower() == 'status':
-                result = Runner.run_sync(agent, "Get the current task status")
+                result = Runner.run_sync(agent, "Get the current task status", session=session)
+                print(f"Agent: {result.final_output}")
+                continue
+            elif user_input.lower() == 'memory':
+                result = Runner.run_sync(agent, "Tell me what you remember about our previous conversations and interactions", session=session)
                 print(f"Agent: {result.final_output}")
                 continue
             elif "escape" in user_input.lower() or "room" in user_input.lower():
                 print("Agent: Starting complex task execution...")
-                result = execute_long_form_task(agent, user_input)
+                result = execute_long_form_task(agent, session, user_input)
                 print(f"Agent: {result}")
                 continue
             
-            # Send message to agent
+            # Send message to agent with session for memory
             print("Agent: ", end="", flush=True)
             try:
-                result = Runner.run_sync(agent, user_input)
+                result = Runner.run_sync(agent, user_input, session=session)
                 print(result.final_output)
             except Exception as e:
                 print(f"Error getting response: {str(e)}")
