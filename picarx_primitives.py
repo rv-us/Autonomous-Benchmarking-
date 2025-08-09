@@ -116,20 +116,81 @@ def get_grayscale() -> list:
     px = get_picarx()
     return px.get_grayscale_data()
 
-# --- Camera Function ---
+# --- Camera Functions ---
+_vilib_initialized = False
+
+def init_camera() -> None:
+    """Initialize the camera system. Call this once at startup."""
+    global _vilib_initialized
+    if not _vilib_initialized:
+        try:
+            from vilib import Vilib
+            Vilib.camera_start(vflip=False, hflip=False)
+            Vilib.display(local=False, web=True)
+            
+            # Wait for camera to be ready
+            while True:
+                if hasattr(Vilib, 'flask_start') and Vilib.flask_start:
+                    break
+                time.sleep(0.01)
+            
+            time.sleep(0.5)  # Additional stabilization time
+            _vilib_initialized = True
+            print("Camera initialized successfully")
+        except Exception as e:
+            print(f"Camera initialization error: {e}")
+
 def capture_image(filename: str = "img_capture.jpg") -> None:
-    """Capture an image from the camera and save to filename. Requires Vilib to be running."""
+    """Capture an image from the camera and save to filename. Camera must be initialized first."""
     try:
         from vilib import Vilib
         import cv2
-        Vilib.camera_start()
-        time.sleep(0.2)
-        img = Vilib.img
-        if img is not None:
-            cv2.imwrite(filename, img)
-        Vilib.camera_close()
+        
+        # Initialize camera if not already done
+        if not _vilib_initialized:
+            init_camera()
+        
+        # Capture image using the same method as gpt_car.py
+        if hasattr(Vilib, 'img') and Vilib.img is not None:
+            cv2.imwrite(filename, Vilib.img)
+            print(f"Image saved as {filename}")
+        else:
+            print("No image available from camera")
     except Exception as e:
-        print(f"Camera error: {e}")
+        print(f"Camera capture error: {e}")
+
+def take_photo_vilib(name: str = None, path: str = "./") -> str:
+    """Take a photo using Vilib's built-in photo function."""
+    try:
+        from vilib import Vilib
+        import time
+        
+        if not _vilib_initialized:
+            init_camera()
+        
+        if name is None:
+            from time import strftime, localtime
+            name = f'photo_{strftime("%Y-%m-%d-%H-%M-%S", localtime(time.time()))}'
+        
+        Vilib.take_photo(name, path)
+        full_path = f"{path}{name}.jpg"
+        print(f'Photo saved as {full_path}')
+        return full_path
+    except Exception as e:
+        print(f"Photo capture error: {e}")
+        return ""
+
+def close_camera() -> None:
+    """Close the camera system. Call this when shutting down."""
+    global _vilib_initialized
+    if _vilib_initialized:
+        try:
+            from vilib import Vilib
+            Vilib.camera_close()
+            _vilib_initialized = False
+            print("Camera closed")
+        except Exception as e:
+            print(f"Camera close error: {e}")
 
 # --- Speaker Function ---
 def play_sound(filename: str, volume: int = 100) -> None:
