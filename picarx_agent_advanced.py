@@ -167,6 +167,57 @@ def init_camera_tool() -> str:
         return f"Error initializing camera: {str(e)}"
 
 @function_tool
+def get_servo_angles_tool() -> str:
+    """Get the current angles of all servos."""
+    try:
+        angles = get_servo_angles()
+        return f"Current servo angles: Steering={angles['dir_servo']}°, Camera Pan={angles['cam_pan']}°, Camera Tilt={angles['cam_tilt']}°"
+    except Exception as e:
+        return f"Error getting servo angles: {str(e)}"
+
+@function_tool
+def scan_360_tool(num_photos: int = 8) -> str:
+    """Perform a 360-degree scan while stationary, taking photos at different angles."""
+    try:
+        photo_files = scan_360_degrees(num_photos)
+        return f"360-degree scan completed. Captured {len(photo_files)} photos: {', '.join(photo_files)}"
+    except Exception as e:
+        return f"Error during 360 scan: {str(e)}"
+
+@function_tool
+def move_backward_safe_tool(distance_cm: float = 20, speed: int = 30) -> str:
+    """Move backward safely for a specified distance in centimeters."""
+    try:
+        success = move_backward_safe(distance_cm, speed)
+        if success:
+            return f"Moved backward {distance_cm}cm at speed {speed}"
+        else:
+            return "Failed to move backward safely"
+    except Exception as e:
+        return f"Error moving backward: {str(e)}"
+
+@function_tool
+def assess_environment_tool() -> str:
+    """Take a photo and get sensor readings to assess the current environment."""
+    try:
+        assessment = assess_environment()
+        result = f"Environment Assessment:\n"
+        result += f"- Distance to obstacle: {assessment['distance_cm']:.1f}cm\n"
+        result += f"- Current servo angles: {assessment['servo_angles']}\n"
+        result += f"- Photo saved as: {assessment['photo_filename']}\n"
+        
+        if assessment['too_close']:
+            result += "- WARNING: Too close to obstacle (< 15cm)\n"
+        elif assessment['safe_distance']:
+            result += "- Safe distance from obstacles\n"
+        else:
+            result += "- Moderate distance from obstacles\n"
+            
+        return result
+    except Exception as e:
+        return f"Error assessing environment: {str(e)}"
+
+@function_tool
 def analyze_image_tool(filename: str = "img_capture.jpg") -> str:
     """Analyze the captured image to identify obstacles, exits, paths, and objects."""
     try:
@@ -198,12 +249,14 @@ def create_plan_tool(task_description: str) -> str:
         # Create a basic plan based on task type
         if "escape" in task_description.lower() or "room" in task_description.lower():
             task_plan = [
-                "1. Take initial picture to assess environment",
-                "2. Check distance to obstacles",
-                "3. Look around 360 degrees to find exits",
-                "4. Plan path to exit",
-                "5. Execute movement while avoiding obstacles",
-                "6. Verify progress and adjust if needed"
+                "1. Assess current environment with photo and sensors",
+                "2. If too close to obstacles, move backward to safe distance",
+                "3. Perform 360-degree scan while stationary to find exits",
+                "4. Analyze all photos to identify best exit route",
+                "5. Execute first movement toward exit",
+                "6. Reassess environment after movement",
+                "7. Continue step-by-step with constant reassessment",
+                "8. Adapt route if obstacles are encountered"
             ]
         elif "explore" in task_description.lower():
             task_plan = [
@@ -243,22 +296,24 @@ def execute_plan_step_tool(step_number: Optional[int] = None) -> str:
         current_step = step_number
         
         # Execute the step based on its content
-        if "picture" in step.lower():
-            result = capture_image_tool()
+        if "picture" in step.lower() or "assess" in step.lower():
+            result = assess_environment_tool()
             task_history.append(f"Step {step_number}: {result}")
             return f"Executed step {step_number}: {step}\nResult: {result}"
         elif "distance" in step.lower():
             result = get_ultrasound_tool()
             task_history.append(f"Step {step_number}: {result}")
             return f"Executed step {step_number}: {step}\nResult: {result}"
-        elif "look around" in step.lower():
-            # Pan camera to look around
-            set_cam_pan_servo_tool(-30)
-            time.sleep(1)
-            set_cam_pan_servo_tool(30)
-            time.sleep(1)
-            set_cam_pan_servo_tool(0)
-            result = "Looked around 360 degrees"
+        elif "look around" in step.lower() or "360" in step.lower():
+            # Perform 360 degree scan while stationary
+            result = scan_360_tool(8)
+            task_history.append(f"Step {step_number}: {result}")
+            return f"Executed step {step_number}: {step}\nResult: {result}"
+        elif "move" in step.lower() and "backward" in step.lower():
+            result = move_backward_safe_tool(20, 25)
+            # Assess environment after movement
+            assessment = assess_environment_tool()
+            result += f"\nPost-movement assessment: {assessment}"
             task_history.append(f"Step {step_number}: {result}")
             return f"Executed step {step_number}: {step}\nResult: {result}"
         else:
@@ -300,29 +355,34 @@ def create_advanced_agent():
     # Create the agent with tools
     agent = Agent(
         name="Picar-X Advanced Robot Controller",
-        instructions="""You are an advanced robot controller that can perform complex, multi-step tasks.
+        instructions="""You are an advanced robot controller that can perform complex, multi-step tasks with environmental awareness.
         
         You have access to the following capabilities:
-        - Movement: drive_forward, drive_backward, turn_left, turn_right, stop
-        - Servos: set_dir_servo (steering), set_cam_pan_servo, set_cam_tilt_servo
+        - Movement: drive_forward, drive_backward, turn_left, turn_right, stop, move_backward_safe
+        - Servos: set_dir_servo (steering), set_cam_pan_servo, set_cam_tilt_servo, get_servo_angles
         - Sensors: get_ultrasound (distance), get_grayscale (line following)
-        - Camera: init_camera (initialize first), capture_image, analyze_image
+        - Camera: init_camera, capture_image, scan_360 (360° scan while stationary), assess_environment
         - Audio: play_sound
         - Planning: create_plan, execute_plan_step
         
-        IMPORTANT: Before taking any photos, make sure to initialize the camera with init_camera_tool first.
+        IMPORTANT BEHAVIORS:
+        1. Always check servo angles before adjusting them using get_servo_angles_tool
+        2. For 360° scanning, use scan_360_tool which keeps the robot stationary
+        3. After every movement, use assess_environment_tool to take a photo and check sensors
+        4. If distance sensor shows < 15cm, consider moving backward using move_backward_safe_tool
+        5. Take photos frequently to reassess the environment
         
         For complex tasks like "escape this room":
         1. Initialize the camera system if not already done
-        2. Create a plan with multiple steps
-        3. Execute each step while monitoring progress
-        4. Use sensor data and images to make decisions
-        5. Adapt the plan based on what you observe
-        6. Continue until the task is complete
+        2. Assess current environment (photo + sensors)
+        3. If too close to obstacles, move backward to safe distance
+        4. Perform 360° scan while stationary to find exits
+        5. Plan path based on visual and sensor data
+        6. Execute movement step by step, reassessing after each move
+        7. Adapt plan based on new observations
         
-        Always prioritize safety and be careful with movement commands.
-        Use appropriate speeds and durations for smooth operation.
-        When analyzing images, look for obstacles, exits, and navigable paths.""",
+        Always prioritize safety and environmental awareness.
+        Take photos after every significant movement to stay oriented.""",
         tools=[
             reset_tool,
             set_dir_servo_tool,
@@ -338,6 +398,10 @@ def create_advanced_agent():
             get_grayscale_tool,
             init_camera_tool,
             capture_image_tool,
+            get_servo_angles_tool,
+            scan_360_tool,
+            move_backward_safe_tool,
+            assess_environment_tool,
             analyze_image_tool,
             play_sound_tool,
             create_plan_tool,
