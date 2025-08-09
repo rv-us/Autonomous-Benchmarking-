@@ -176,13 +176,33 @@ def get_servo_angles_tool() -> str:
         return f"Error getting servo angles: {str(e)}"
 
 @function_tool
-def scan_360_tool(num_photos: int = 8) -> str:
-    """Perform a 360-degree scan while stationary, taking photos at different angles."""
+def scan_360_tool(photos_per_direction: int = 1) -> str:
+    """Perform a true 360-degree scan by rotating the robot in place and taking photos in all directions."""
     try:
-        photo_files = scan_360_degrees(num_photos)
-        return f"360-degree scan completed. Captured {len(photo_files)} photos: {', '.join(photo_files)}"
+        scan_results = scan_360_with_rotation(photos_per_direction)
+        
+        result_text = f"360-degree rotation scan completed. Results:\n"
+        photo_files = []
+        
+        for result in scan_results:
+            result_text += f"- {result['direction']}: {result['distance_cm']:.1f}cm, "
+            result_text += f"{'CLEAR' if result['is_clear'] else 'BLOCKED'}, "
+            result_text += f"{'EXIT CANDIDATE' if result['is_exit_candidate'] else 'NO EXIT'}\n"
+            result_text += f"  Photos: {', '.join(result['photos'])}\n"
+            photo_files.extend(result['photos'])
+        
+        # Find best exit direction based on sensor data
+        best_exit = find_best_exit_direction(scan_results)
+        if best_exit:
+            result_text += f"\nSensor-based recommendation: {best_exit['direction']} ({best_exit['reason']})\n"
+            result_text += f"Key photos to upload for visual analysis: {', '.join(best_exit['photos'])}\n"
+        
+        result_text += f"\nAll photos saved: {', '.join(photo_files)}\n"
+        result_text += "Upload any photos to get visual analysis for navigation decisions."
+        
+        return result_text
     except Exception as e:
-        return f"Error during 360 scan: {str(e)}"
+        return f"Error during 360 rotation scan: {str(e)}"
 
 @function_tool
 def move_backward_safe_tool(distance_cm: float = 20, speed: int = 30) -> str:
@@ -218,14 +238,170 @@ def assess_environment_tool() -> str:
         return f"Error assessing environment: {str(e)}"
 
 @function_tool
-def analyze_image_tool(filename: str = "img_capture.jpg") -> str:
-    """Analyze the captured image to identify obstacles, exits, paths, and objects."""
+def rotate_in_place_tool(degrees: float, speed: int = 30) -> str:
+    """Rotate the robot in place. Positive degrees = clockwise, negative = counter-clockwise."""
     try:
-        # For now, return a basic analysis
-        # In a real implementation, you might use computer vision or send to GPT-4V
-        return f"Analyzing image {filename}... Image captured successfully. Use visual inspection to identify obstacles, exits, and navigable paths."
+        success = rotate_in_place(degrees, speed)
+        if success:
+            direction = "clockwise" if degrees > 0 else "counter-clockwise"
+            return f"Rotated {abs(degrees)}° {direction} in place"
+        else:
+            return "Failed to rotate in place"
     except Exception as e:
-        return f"Error analyzing image: {str(e)}"
+        return f"Error rotating in place: {str(e)}"
+
+@function_tool
+def find_exit_and_navigate_tool() -> str:
+    """Perform 360° scan to find exits, then navigate toward the best option."""
+    try:
+        # Perform 360-degree scan
+        scan_results = scan_360_with_rotation(1)
+        
+        # Find best exit
+        best_exit = find_best_exit_direction(scan_results)
+        
+        if not best_exit:
+            return "No viable exit directions found"
+        
+        result = f"Exit analysis complete:\n"
+        result += f"Best direction: {best_exit['direction']} ({best_exit['distance_cm']:.1f}cm)\n"
+        result += f"Reason: {best_exit['reason']}\n"
+        
+        # If we're not already facing the best direction, rotate to face it
+        # Assuming we start facing North after the 360 scan
+        if best_exit['direction'] != 'North':
+            rotate_success = rotate_to_direction(best_exit['direction'], 'North')
+            if rotate_success:
+                result += f"Rotated to face {best_exit['direction']}\n"
+            else:
+                result += f"Failed to rotate to {best_exit['direction']}\n"
+        
+        # If it's a clear path, suggest moving forward
+        if best_exit['is_clear']:
+            result += "Path is clear - ready to move forward"
+        else:
+            result += "Path has obstacles - proceed with caution"
+        
+        return result
+        
+    except Exception as e:
+        return f"Error in exit finding and navigation: {str(e)}"
+
+@function_tool
+def analyze_image_tool(filename: str = "img_capture.jpg") -> str:
+    """Save image for manual analysis via file upload."""
+    try:
+        import os
+        if os.path.exists(filename):
+            return f"Image {filename} captured and saved. Please upload this file to analyze what the robot sees for navigation guidance."
+        else:
+            return f"Image file {filename} not found"
+    except Exception as e:
+        return f"Error with image {filename}: {str(e)}"
+
+@function_tool
+def prepare_analysis_report_tool() -> str:
+    """Generate a comprehensive report of sensor data and images for external analysis."""
+    try:
+        import glob
+        import os
+        from datetime import datetime
+        
+        # Find all recent scan photos
+        scan_photos = glob.glob("scan_360_*.jpg")
+        other_photos = glob.glob("img_capture*.jpg") + glob.glob("assessment_*.jpg")
+        
+        # Sort by modification time to get most recent
+        all_photos = scan_photos + other_photos
+        if all_photos:
+            all_photos.sort(key=os.path.getmtime, reverse=True)
+        
+        # Get current sensor readings
+        distance = get_ultrasound()
+        servo_angles = get_servo_angles()
+        
+        # Generate comprehensive report
+        report = f"=== PICAR-X NAVIGATION ANALYSIS REQUEST ===\n"
+        report += f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        
+        report += f"CURRENT SENSOR DATA:\n"
+        report += f"- Ultrasonic Distance: {distance:.1f}cm\n"
+        report += f"- Servo Positions: Steering={servo_angles['dir_servo']}°, "
+        report += f"Camera Pan={servo_angles['cam_pan']}°, Camera Tilt={servo_angles['cam_tilt']}°\n\n"
+        
+        if scan_photos:
+            report += f"360° SCAN IMAGES (upload these for directional analysis):\n"
+            directions = ['north', 'east', 'south', 'west']
+            for direction in directions:
+                direction_photos = [p for p in scan_photos if direction in p.lower()]
+                if direction_photos:
+                    latest_photo = max(direction_photos, key=os.path.getmtime)
+                    report += f"- {direction.upper()}: {latest_photo}\n"
+        
+        if other_photos:
+            report += f"\nOTHER RECENT IMAGES:\n"
+            for photo in other_photos[:5]:  # Show up to 5 most recent
+                report += f"- {photo}\n"
+        
+        report += f"\nANALYSIS REQUEST:\n"
+        report += f"Please upload the images above and provide:\n"
+        report += f"1. Visual analysis of each direction (exits, obstacles, clear paths)\n"
+        report += f"2. Best exit direction recommendation\n"
+        report += f"3. Navigation instructions (rotate degrees, move distance)\n"
+        report += f"4. Safety considerations and obstacles to avoid\n"
+        
+        return report
+        
+    except Exception as e:
+        return f"Error generating analysis report: {str(e)}"
+
+@function_tool
+def execute_navigation_command_tool(command: str) -> str:
+    """Execute a navigation command received from external analysis."""
+    try:
+        command = command.lower().strip()
+        
+        if "rotate" in command and "clockwise" in command:
+            # Extract degrees if specified
+            import re
+            degrees_match = re.search(r'(\d+)', command)
+            degrees = int(degrees_match.group(1)) if degrees_match else 90
+            return rotate_in_place_tool(degrees)
+            
+        elif "rotate" in command and ("counter" in command or "left" in command):
+            # Extract degrees if specified
+            import re
+            degrees_match = re.search(r'(\d+)', command)
+            degrees = int(degrees_match.group(1)) if degrees_match else 90
+            return rotate_in_place_tool(-degrees)
+            
+        elif "move forward" in command or "drive forward" in command:
+            # Extract distance/duration if specified
+            import re
+            distance_match = re.search(r'(\d+)', command)
+            if distance_match:
+                duration = int(distance_match.group(1)) / 10  # Convert cm to rough duration
+                return drive_forward_tool(30, duration)
+            else:
+                return drive_forward_tool(30, 2)  # Default 2 seconds
+                
+        elif "move backward" in command or "back up" in command:
+            import re
+            distance_match = re.search(r'(\d+)', command)
+            distance = int(distance_match.group(1)) if distance_match else 20
+            return move_backward_safe_tool(distance)
+            
+        elif "stop" in command:
+            return stop_tool()
+            
+        elif "assess" in command or "check" in command:
+            return assess_environment_tool()
+            
+        else:
+            return f"Navigation command not recognized: {command}. Available commands: rotate clockwise/counter-clockwise [degrees], move forward [distance], move backward [distance], stop, assess environment"
+            
+    except Exception as e:
+        return f"Error executing navigation command '{command}': {str(e)}"
 
 @function_tool
 def play_sound_tool(filename: str, volume: int = 100) -> str:
@@ -251,12 +427,13 @@ def create_plan_tool(task_description: str) -> str:
             task_plan = [
                 "1. Assess current environment with photo and sensors",
                 "2. If too close to obstacles, move backward to safe distance",
-                "3. Perform 360-degree scan while stationary to find exits",
-                "4. Analyze all photos to identify best exit route",
-                "5. Execute first movement toward exit",
-                "6. Reassess environment after movement",
-                "7. Continue step-by-step with constant reassessment",
-                "8. Adapt route if obstacles are encountered"
+                "3. Perform 360-degree scan by rotating in place and taking photos",
+                "4. Analyze scan results to find best exit direction",
+                "5. Rotate to face the best exit direction",
+                "6. Move forward toward exit if path is clear",
+                "7. Reassess environment after each movement",
+                "8. If blocked, find open space and repeat 360-scan",
+                "9. Continue until exit is found"
             ]
         elif "explore" in task_description.lower():
             task_plan = [
@@ -304,9 +481,17 @@ def execute_plan_step_tool(step_number: Optional[int] = None) -> str:
             result = get_ultrasound_tool()
             task_history.append(f"Step {step_number}: {result}")
             return f"Executed step {step_number}: {step}\nResult: {result}"
-        elif "look around" in step.lower() or "360" in step.lower():
-            # Perform 360 degree scan while stationary
-            result = scan_360_tool(8)
+        elif "360" in step.lower() or "scan" in step.lower():
+            # Perform 360 degree scan by rotating robot
+            result = scan_360_tool(1)
+            task_history.append(f"Step {step_number}: {result}")
+            return f"Executed step {step_number}: {step}\nResult: {result}"
+        elif "find" in step.lower() and "exit" in step.lower():
+            result = find_exit_and_navigate_tool()
+            task_history.append(f"Step {step_number}: {result}")
+            return f"Executed step {step_number}: {step}\nResult: {result}"
+        elif "rotate" in step.lower() or "face" in step.lower():
+            result = "Ready to rotate to face exit direction"
             task_history.append(f"Step {step_number}: {result}")
             return f"Executed step {step_number}: {step}\nResult: {result}"
         elif "move" in step.lower() and "backward" in step.lower():
@@ -358,31 +543,48 @@ def create_advanced_agent():
         instructions="""You are an advanced robot controller that can perform complex, multi-step tasks with environmental awareness.
         
         You have access to the following capabilities:
-        - Movement: drive_forward, drive_backward, turn_left, turn_right, stop, move_backward_safe
+        - Movement: drive_forward, drive_backward, stop, move_backward_safe
+        - Rotation: rotate_in_place (safe in-place rotation), turn_left/turn_right (avoid - these move forward)
         - Servos: set_dir_servo (steering), set_cam_pan_servo, set_cam_tilt_servo, get_servo_angles
         - Sensors: get_ultrasound (distance), get_grayscale (line following)
-        - Camera: init_camera, capture_image, scan_360 (360° scan while stationary), assess_environment
+        - Camera: init_camera, capture_image, assess_environment
+        - Navigation: scan_360 (true 360° by rotating robot), find_exit_and_navigate
         - Audio: play_sound
         - Planning: create_plan, execute_plan_step
         
-        IMPORTANT BEHAVIORS:
-        1. Always check servo angles before adjusting them using get_servo_angles_tool
-        2. For 360° scanning, use scan_360_tool which keeps the robot stationary
-        3. After every movement, use assess_environment_tool to take a photo and check sensors
-        4. If distance sensor shows < 15cm, consider moving backward using move_backward_safe_tool
-        5. Take photos frequently to reassess the environment
+        CRITICAL SAFETY RULES:
+        1. NEVER use turn_left or turn_right - they move forward and can hit obstacles
+        2. Use rotate_in_place_tool for all turning - it's safe and doesn't move forward
+        3. Use scan_360_tool for true 360° scanning - it rotates the robot and takes photos in all directions
+        4. After every movement, use assess_environment_tool to take a photo and check sensors
+        5. If distance sensor shows < 15cm, move backward using move_backward_safe_tool
         
-        For complex tasks like "escape this room":
-        1. Initialize the camera system if not already done
-        2. Assess current environment (photo + sensors)
+        For escape room tasks:
+        1. Initialize camera system
+        2. Assess current environment
         3. If too close to obstacles, move backward to safe distance
-        4. Perform 360° scan while stationary to find exits
-        5. Plan path based on visual and sensor data
-        6. Execute movement step by step, reassessing after each move
-        7. Adapt plan based on new observations
+        4. Use scan_360_tool - this rotates the robot 90° at a time, taking photos in each direction
+        5. The scan identifies North/East/South/West directions and finds the best exit
+        6. Use find_exit_and_navigate_tool for complete exit analysis and positioning
+        7. Move forward only when facing a clear direction
+        8. If no clear exit found, move to the most open space and repeat scan
         
-        Always prioritize safety and environmental awareness.
-        Take photos after every significant movement to stay oriented.""",
+        The 360° scan works by:
+        - Taking photo facing current direction
+        - Rotating 90° clockwise in place
+        - Taking photo in new direction
+        - Repeating until full 360° coverage
+        - Saving photos for manual upload and analysis
+        
+        EXTERNAL ANALYSIS WORKFLOW:
+        - Use prepare_analysis_report_tool to generate comprehensive sensor + image report
+        - Report includes current ultrasonic readings and lists all captured photos
+        - Human operator uploads photos to external advanced agent for visual analysis
+        - External agent analyzes images + sensor data to determine best exit
+        - Use execute_navigation_command_tool to follow navigation instructions from analysis
+        - This combines visual intelligence with real-time sensor data for optimal navigation
+        
+        Always prioritize safety - use in-place rotation instead of forward-turning movements.""",
         tools=[
             reset_tool,
             set_dir_servo_tool,
@@ -400,9 +602,13 @@ def create_advanced_agent():
             capture_image_tool,
             get_servo_angles_tool,
             scan_360_tool,
+            rotate_in_place_tool,
+            find_exit_and_navigate_tool,
             move_backward_safe_tool,
             assess_environment_tool,
             analyze_image_tool,
+            prepare_analysis_report_tool,
+            execute_navigation_command_tool,
             play_sound_tool,
             create_plan_tool,
             execute_plan_step_tool,
@@ -447,12 +653,16 @@ def main():
     agent, session = create_advanced_agent()
     
     print("Advanced Picar-X Agent with Memory initialized!")
-    print("Type 'quit' to exit")
-    print("Type 'reset' to reset the robot")
-    print("Type 'status' to check task status")
-    print("Type 'memory' to test memory functionality")
-    print("Type 'escape room' for a complex task example")
-    print("Memory is enabled - I will remember our conversations!")
+    print("Commands:")
+    print("  'quit' - Exit")
+    print("  'reset' - Reset the robot")
+    print("  'status' - Check task status")
+    print("  'memory' - Test memory functionality")
+    print("  'scan' - Perform 360° scan and prepare analysis report")
+    print("  'report' - Generate analysis report for current images")
+    print("  'execute: [command]' - Execute navigation command from analysis")
+    print("  'escape room' - Complex task example")
+    print("Memory enabled - I will remember our conversations!")
     print("-" * 50)
     
     try:
@@ -472,6 +682,19 @@ def main():
                 continue
             elif user_input.lower() == 'memory':
                 result = Runner.run_sync(agent, "Tell me what you remember about our previous conversations and interactions", session=session)
+                print(f"Agent: {result.final_output}")
+                continue
+            elif user_input.lower() == 'scan':
+                result = Runner.run_sync(agent, "Perform a 360-degree scan and then prepare an analysis report", session=session)
+                print(f"Agent: {result.final_output}")
+                continue
+            elif user_input.lower() == 'report':
+                result = Runner.run_sync(agent, "Prepare an analysis report for the current images and sensor data", session=session)
+                print(f"Agent: {result.final_output}")
+                continue
+            elif user_input.lower().startswith('execute:'):
+                command = user_input[8:].strip()  # Remove 'execute:' prefix
+                result = Runner.run_sync(agent, f"Execute this navigation command: {command}", session=session)
                 print(f"Agent: {result.final_output}")
                 continue
             elif "escape" in user_input.lower() or "room" in user_input.lower():
