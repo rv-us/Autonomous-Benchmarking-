@@ -198,6 +198,129 @@ def move_backward_safe(distance_cm: float = 20, speed: int = 30) -> bool:
         px.stop()
         return False
 
+def rotate_in_place(degrees: float, speed: int = 30) -> bool:
+    """Rotate the robot in place by the specified degrees. Positive = clockwise, Negative = counter-clockwise."""
+    global _servo_angles
+    px = get_picarx()
+    
+    try:
+        # Set steering to maximum angle for tightest turn
+        if degrees > 0:  # Clockwise rotation
+            px.set_dir_servo_angle(30)  # Max right steering
+            _servo_angles['dir_servo'] = 30
+            # Use differential motor speeds for in-place rotation
+            px.set_motor_speed([1, 2], [speed, -speed])  # Right forward, left backward
+        else:  # Counter-clockwise rotation
+            px.set_dir_servo_angle(-30)  # Max left steering
+            _servo_angles['dir_servo'] = -30
+            # Use differential motor speeds for in-place rotation
+            px.set_motor_speed([1, 2], [-speed, speed])  # Left forward, right backward
+        
+        # Calculate rotation duration (this needs calibration for your specific robot)
+        # Rough estimate: 90 degrees takes about 1 second at speed 30
+        duration = abs(degrees) / 90.0 * 1.0 * (30.0 / speed)
+        time.sleep(duration)
+        
+        # Stop and reset steering
+        px.stop()
+        px.set_dir_servo_angle(0)
+        _servo_angles['dir_servo'] = 0
+        
+        return True
+    except Exception as e:
+        print(f"Rotation error: {e}")
+        px.stop()
+        px.set_dir_servo_angle(0)
+        _servo_angles['dir_servo'] = 0
+        return False
+
+def scan_360_with_rotation(photos_per_direction: int = 1) -> List[dict]:
+    """Perform a true 360-degree scan by rotating the robot in place and taking photos."""
+    scan_results = []
+    directions = ['North', 'East', 'South', 'West']
+    
+    try:
+        for i, direction in enumerate(directions):
+            # Take photos in current direction
+            photos = []
+            for photo_num in range(photos_per_direction):
+                filename = f"scan_360_{direction.lower()}_{photo_num+1}.jpg"
+                capture_image(filename)
+                photos.append(filename)
+                time.sleep(0.2)
+            
+            # Get distance reading in this direction
+            distance = get_ultrasound()
+            
+            # Store results for this direction
+            scan_results.append({
+                'direction': direction,
+                'angle_degrees': i * 90,
+                'photos': photos,
+                'distance_cm': distance,
+                'is_clear': distance > 30,  # Consider clear if > 30cm
+                'is_exit_candidate': distance > 50  # Potential exit if > 50cm
+            })
+            
+            # Rotate 90 degrees clockwise for next direction (except on last iteration)
+            if i < len(directions) - 1:
+                print(f"Rotating 90° clockwise to face {directions[i+1]}")
+                rotate_in_place(90, 25)
+                time.sleep(0.5)  # Brief pause after rotation
+        
+        return scan_results
+        
+    except Exception as e:
+        print(f"360 rotation scan error: {e}")
+        return scan_results
+
+def find_best_exit_direction(scan_results: List[dict]) -> dict:
+    """Analyze scan results to find the best exit direction."""
+    if not scan_results:
+        return None
+    
+    # Sort by distance (furthest first) and filter for clear paths
+    clear_directions = [result for result in scan_results if result['is_clear']]
+    
+    if not clear_directions:
+        # No clear directions, find the least obstructed
+        best_direction = max(scan_results, key=lambda x: x['distance_cm'])
+        best_direction['reason'] = 'Least obstructed path'
+    else:
+        # Find the clearest path
+        exit_candidates = [result for result in clear_directions if result['is_exit_candidate']]
+        
+        if exit_candidates:
+            best_direction = max(exit_candidates, key=lambda x: x['distance_cm'])
+            best_direction['reason'] = 'Potential exit found'
+        else:
+            best_direction = max(clear_directions, key=lambda x: x['distance_cm'])
+            best_direction['reason'] = 'Clearest available path'
+    
+    return best_direction
+
+def rotate_to_direction(target_direction: str, current_direction: str = 'North') -> bool:
+    """Rotate robot to face a specific direction."""
+    directions = ['North', 'East', 'South', 'West']
+    
+    try:
+        current_index = directions.index(current_direction)
+        target_index = directions.index(target_direction)
+        
+        # Calculate rotation needed
+        rotation_steps = (target_index - current_index) % 4
+        degrees_to_rotate = rotation_steps * 90
+        
+        if degrees_to_rotate > 0:
+            print(f"Rotating {degrees_to_rotate}° clockwise to face {target_direction}")
+            return rotate_in_place(degrees_to_rotate, 25)
+        
+        return True
+        
+    except ValueError:
+        print(f"Invalid direction: {target_direction} or {current_direction}")
+        return False
+
 def assess_environment() -> dict:
     """Take a photo and get sensor readings to assess current environment."""
     # Get distance reading
