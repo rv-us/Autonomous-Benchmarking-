@@ -30,29 +30,67 @@ def get_music() -> Music:
         _music = Music()
     return _music
 
+# Servo angle tracking
+_servo_angles = {
+    'dir_servo': 0,      # steering servo
+    'cam_pan': 0,        # camera pan servo
+    'cam_tilt': 0        # camera tilt servo
+}
+
 # --- Servo and Motor Primitives ---
 def reset() -> None:
     """Reset all servos to 0 and stop the motors."""
+    global _servo_angles
     px = get_picarx()
     px.set_dir_servo_angle(0)
     px.set_cam_pan_angle(0)
     px.set_cam_tilt_angle(0)
     px.stop()
+    # Update tracked angles
+    _servo_angles['dir_servo'] = 0
+    _servo_angles['cam_pan'] = 0
+    _servo_angles['cam_tilt'] = 0
 
 def set_dir_servo(angle: float) -> None:
     """Set the direction (steering) servo angle (-30 to 30 typical)."""
+    global _servo_angles
     px = get_picarx()
     px.set_dir_servo_angle(angle)
+    _servo_angles['dir_servo'] = angle
 
 def set_cam_pan_servo(angle: float) -> None:
     """Set the camera pan servo angle (-35 to 35 typical)."""
+    global _servo_angles
     px = get_picarx()
     px.set_cam_pan_angle(angle)
+    _servo_angles['cam_pan'] = angle
 
 def set_cam_tilt_servo(angle: float) -> None:
     """Set the camera tilt servo angle (-35 to 35 typical)."""
+    global _servo_angles
     px = get_picarx()
     px.set_cam_tilt_angle(angle)
+    _servo_angles['cam_tilt'] = angle
+
+def get_servo_angles() -> dict:
+    """Get current angles of all servos."""
+    global _servo_angles
+    return _servo_angles.copy()
+
+def get_dir_servo_angle() -> float:
+    """Get current steering servo angle."""
+    global _servo_angles
+    return _servo_angles['dir_servo']
+
+def get_cam_pan_angle() -> float:
+    """Get current camera pan servo angle."""
+    global _servo_angles
+    return _servo_angles['cam_pan']
+
+def get_cam_tilt_angle() -> float:
+    """Get current camera tilt servo angle."""
+    global _servo_angles
+    return _servo_angles['cam_tilt']
 
 def set_motor_speed(motor_id: int, speed: int) -> None:
     """
@@ -97,13 +135,89 @@ def turn_left(angle: float, speed: int = 30, duration: Optional[float] = None) -
 
 def turn_right(angle: float, speed: int = 30, duration: Optional[float] = None) -> None:
     """Turn right by setting steering angle and driving forward. Optionally for a duration."""
+    global _servo_angles
     px = get_picarx()
     px.set_dir_servo_angle(abs(angle))
+    _servo_angles['dir_servo'] = abs(angle)
     px.forward(speed)
     if duration is not None:
         time.sleep(duration)
         px.stop()
         px.set_dir_servo_angle(0)
+        _servo_angles['dir_servo'] = 0
+
+def scan_360_degrees(num_photos: int = 8) -> List[str]:
+    """Scan 360 degrees while stationary, taking photos at each position."""
+    global _servo_angles
+    photo_filenames = []
+    original_pan_angle = _servo_angles['cam_pan']
+    
+    # Calculate angles for 360 degree scan
+    angles = []
+    for i in range(num_photos):
+        angle = -35 + (70 * i / (num_photos - 1))  # Spread across -35 to +35 degrees
+        angles.append(angle)
+    
+    try:
+        for i, angle in enumerate(angles):
+            # Move camera to position
+            set_cam_pan_servo(angle)
+            time.sleep(0.5)  # Wait for servo to reach position
+            
+            # Take photo
+            filename = f"scan_360_{i+1}_{int(angle)}_degrees.jpg"
+            capture_image(filename)
+            photo_filenames.append(filename)
+            time.sleep(0.2)  # Brief pause between photos
+        
+        # Return camera to original position
+        set_cam_pan_servo(original_pan_angle)
+        
+    except Exception as e:
+        print(f"360 scan error: {e}")
+        # Try to return camera to original position
+        set_cam_pan_servo(original_pan_angle)
+    
+    return photo_filenames
+
+def move_backward_safe(distance_cm: float = 20, speed: int = 30) -> bool:
+    """Move backward safely for a specified distance."""
+    px = get_picarx()
+    
+    # Calculate approximate duration based on distance and speed
+    # This is rough - you may need to calibrate for your specific robot
+    duration = distance_cm / (speed * 2)  # Rough approximation
+    
+    try:
+        px.backward(speed)
+        time.sleep(duration)
+        px.stop()
+        return True
+    except Exception as e:
+        print(f"Backward movement error: {e}")
+        px.stop()
+        return False
+
+def assess_environment() -> dict:
+    """Take a photo and get sensor readings to assess current environment."""
+    # Get distance reading
+    distance = get_ultrasound()
+    
+    # Get current servo positions
+    servo_angles = get_servo_angles()
+    
+    # Take assessment photo
+    filename = f"assessment_{int(time.time())}.jpg"
+    capture_image(filename)
+    
+    return {
+        'distance_cm': distance,
+        'servo_angles': servo_angles,
+        'photo_filename': filename,
+        'timestamp': time.time(),
+        'too_close': distance < 15,  # Flag if too close to obstacle
+        'safe_distance': distance > 30  # Flag if safe distance
+    }
 
 # --- Sensor Functions ---
 def get_ultrasound() -> float:
