@@ -150,12 +150,21 @@ def get_grayscale_tool() -> str:
 
 @function_tool
 def capture_image_tool(filename: str = "img_capture.jpg") -> str:
-    """Capture an image from the camera and save to filename. Requires Vilib to be running."""
+    """Capture an image from the camera and save to filename."""
     try:
         capture_image(filename)
         return f"Image captured and saved as {filename}"
     except Exception as e:
         return f"Error capturing image: {str(e)}"
+
+@function_tool
+def init_camera_tool() -> str:
+    """Initialize the camera system for image capture."""
+    try:
+        init_camera()
+        return "Camera system initialized successfully"
+    except Exception as e:
+        return f"Error initializing camera: {str(e)}"
 
 @function_tool
 def analyze_image_tool(filename: str = "img_capture.jpg") -> str:
@@ -297,16 +306,19 @@ def create_advanced_agent():
         - Movement: drive_forward, drive_backward, turn_left, turn_right, stop
         - Servos: set_dir_servo (steering), set_cam_pan_servo, set_cam_tilt_servo
         - Sensors: get_ultrasound (distance), get_grayscale (line following)
-        - Camera: capture_image, analyze_image
+        - Camera: init_camera (initialize first), capture_image, analyze_image
         - Audio: play_sound
         - Planning: create_plan, execute_plan_step
         
+        IMPORTANT: Before taking any photos, make sure to initialize the camera with init_camera_tool first.
+        
         For complex tasks like "escape this room":
-        1. First create a plan with multiple steps
-        2. Execute each step while monitoring progress
-        3. Adapt the plan based on what you observe
+        1. Initialize the camera system if not already done
+        2. Create a plan with multiple steps
+        3. Execute each step while monitoring progress
         4. Use sensor data and images to make decisions
-        5. Continue until the task is complete
+        5. Adapt the plan based on what you observe
+        6. Continue until the task is complete
         
         Always prioritize safety and be careful with movement commands.
         Use appropriate speeds and durations for smooth operation.
@@ -324,6 +336,7 @@ def create_advanced_agent():
             turn_right_tool,
             get_ultrasound_tool,
             get_grayscale_tool,
+            init_camera_tool,
             capture_image_tool,
             analyze_image_tool,
             play_sound_tool,
