@@ -266,27 +266,26 @@ def upload_image_with_context(filename: str, context: str) -> str:
         
         print(f"📸 Processing image: {filename}")
         
-        # Upload image file to OpenAI (following gpt_car.py pattern)
-        from openai import OpenAI
-        openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        # Read and encode the image as base64 (following official Agents SDK documentation)
+        with open(filename, "rb") as image_file:
+            base64_image = base64.b64encode(image_file.read()).decode("utf-8")
         
-        print(f"📤 Uploading image file to OpenAI...")
-        img_file = openai_client.files.create(
-            file=open(filename, "rb"),
-            purpose="vision"
-        )
-        print(f"✅ Image uploaded with file_id: {img_file.id}")
+        print(f"📤 Encoding image as base64...")
+        print(f"✅ Image encoded, size: {len(base64_image)} characters")
         
-        # Create the message with image using file_id (following gpt_car.py pattern)
+        # Create the message with image using proper Agents SDK format
         message_with_image = [
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": context},
                     {
-                        "type": "image_file",
-                        "image_file": {"file_id": img_file.id}
-                    }
+                        "type": "input_image",
+                        "image_url": f"data:image/jpeg;base64,{base64_image}",
+                    },
+                    {
+                        "type": "input_text",
+                        "text": context,
+                    },
                 ]
             }
         ]
@@ -314,16 +313,17 @@ def upload_image_with_context(filename: str, context: str) -> str:
         from agents import RunConfig
         
         run_config = RunConfig(
-            model="gpt-4o"  # Use gpt-4o for better vision analysis (like gpt_car.py)
+            model="gpt-4o"  # Use gpt-4o for vision analysis
         )
         
         print(f"🔍 SENDING IMAGE TO ANALYSIS AGENT...")
         print(f"📸 Image: {filename}")
         print(f"📝 Context length: {len(context)} characters")
         print(f"🤖 Model: gpt-4o")
-        print(f"📁 File ID: {img_file.id}")
-        print(f"📋 Message format: image_file (following gpt_car.py pattern)")
+        print(f"📋 Message format: input_image with base64 (official Agents SDK format)")
+        print(f"🔧 Base64 length: {len(base64_image)} characters")
         
+        # Use run_sync for synchronous execution (compatible with our current setup)
         result = Runner.run_sync(analysis_agent, message_with_image, run_config=run_config)
         
         print(f"✅ ANALYSIS AGENT RESPONSE RECEIVED")
