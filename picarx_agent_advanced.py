@@ -76,8 +76,10 @@ def set_motor_speed_tool(motor_id: int, speed: int) -> str:
 @function_tool
 def drive_forward_tool(speed: int, duration: Optional[float] = None) -> str:
     """Drive forward at given speed (0-100). If duration is set, drive for that many seconds then stop."""
+    print(f"🔧 TOOL CALLED: drive_forward_tool(speed={speed}, duration={duration})")
     try:
         drive_forward(speed, duration)
+        print(f"🚗 Drive forward: speed={speed}, duration={duration}s")
         if duration:
             return f"Drove forward at speed {speed} for {duration} seconds"
         else:
@@ -178,8 +180,10 @@ def get_servo_angles_tool() -> str:
 @function_tool
 def turn_in_place_right_tool(degrees: float = 45) -> str:
     """Turn right in place by specified degrees (default 45°)."""
+    print(f"🔧 TOOL CALLED: turn_in_place_right_tool({degrees}°)")
     try:
         success = turn_in_place_right(degrees)
+        print(f"↪️ Turn right result: {'SUCCESS' if success else 'FAILED'}")
         if success:
             return f"Turned right {degrees}° in place"
         else:
@@ -190,8 +194,10 @@ def turn_in_place_right_tool(degrees: float = 45) -> str:
 @function_tool
 def turn_in_place_left_tool(degrees: float = 45) -> str:
     """Turn left in place by specified degrees (default 45°)."""
+    print(f"🔧 TOOL CALLED: turn_in_place_left_tool({degrees}°)")
     try:
         success = turn_in_place_left(degrees)
+        print(f"↩️ Turn left result: {'SUCCESS' if success else 'FAILED'}")
         if success:
             return f"Turned left {degrees}° in place"
         else:
@@ -202,8 +208,10 @@ def turn_in_place_left_tool(degrees: float = 45) -> str:
 @function_tool
 def check_current_direction_tool() -> str:
     """Take a photo and check ultrasound in current direction to assess if it's an exit."""
+    print("🔧 TOOL CALLED: check_current_direction_tool")
     try:
         result = check_current_direction()
+        print(f"📊 Direction check result: {result['assessment']}, Distance: {result['distance_cm']:.1f}cm")
         
         # Prepare context for image analysis
         context = f"""I am a Picar-X robot trying to escape from a room. I just took this photo while facing a potential exit direction.
@@ -246,34 +254,44 @@ Based on your analysis, provide specific navigation instructions."""
 @function_tool
 def upload_image_with_context(filename: str, context: str) -> str:
     """Upload an image file with contextual information for analysis using OpenAI Agents SDK."""
+    print(f"🔧 TOOL CALLED: upload_image_with_context('{filename}')")
     try:
         import os
         import base64
         from agents import Agent, Runner
         
         if not os.path.exists(filename):
+            print(f"❌ Image file not found: {filename}")
             return f"Image file {filename} not found"
         
-        # Read and encode the image
-        with open(filename, "rb") as image_file:
-            image_data = image_file.read()
-            base64_image = base64.b64encode(image_data).decode('utf-8')
+        print(f"📸 Processing image: {filename}")
         
-        # Create the message with image using proper Responses API format for Agents SDK
+        # Upload image file to OpenAI (following gpt_car.py pattern)
+        from openai import OpenAI
+        openai_client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+        
+        print(f"📤 Uploading image file to OpenAI...")
+        img_file = openai_client.files.create(
+            file=open(filename, "rb"),
+            purpose="vision"
+        )
+        print(f"✅ Image uploaded with file_id: {img_file.id}")
+        
+        # Create the message with image using file_id (following gpt_car.py pattern)
         message_with_image = [
             {
                 "role": "user",
                 "content": [
-                    {"type": "input_text", "text": context},
+                    {"type": "text", "text": context},
                     {
-                        "type": "input_image",
-                        "image_url": f"data:image/jpeg;base64,{base64_image}"
+                        "type": "image_file",
+                        "image_file": {"file_id": img_file.id}
                     }
                 ]
             }
         ]
         
-        # Create a simple analysis agent for this specific image
+        # Create a simple analysis agent for this specific image (following gpt_car.py pattern)
         from keys import OPENAI_API_KEY
         
         os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
@@ -292,14 +310,30 @@ def upload_image_with_context(filename: str, context: str) -> str:
             Be specific, actionable, and safety-focused in your guidance. The robot needs clear instructions."""
         )
         
-        # Send the image for analysis with vision-capable model
+        # Send the image for analysis with vision-capable model (following gpt_car.py approach)
         from agents import RunConfig
         
         run_config = RunConfig(
-            model="gpt-4o-mini"  # Ensure we use a vision-capable model
+            model="gpt-4o"  # Use gpt-4o for better vision analysis (like gpt_car.py)
         )
         
+        print(f"🔍 SENDING IMAGE TO ANALYSIS AGENT...")
+        print(f"📸 Image: {filename}")
+        print(f"📝 Context length: {len(context)} characters")
+        print(f"🤖 Model: gpt-4o")
+        print(f"📁 File ID: {img_file.id}")
+        print(f"📋 Message format: image_file (following gpt_car.py pattern)")
+        
         result = Runner.run_sync(analysis_agent, message_with_image, run_config=run_config)
+        
+        print(f"✅ ANALYSIS AGENT RESPONSE RECEIVED")
+        print(f"📊 Result type: {type(result)}")
+        print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
+        print(f"💬 Final output length: {len(result.final_output)} characters")
+        print(f"📋 Full analysis result:")
+        print("-" * 50)
+        print(result.final_output)
+        print("-" * 50)
         
         analysis_result = result.final_output
         
@@ -386,8 +420,10 @@ def move_backward_safe_tool(distance_cm: float = 20, speed: int = 30) -> str:
 @function_tool
 def assess_environment_tool() -> str:
     """Take a photo and get sensor readings to assess the current environment."""
+    print("🔧 TOOL CALLED: assess_environment_tool")
     try:
         assessment = assess_environment()
+        print(f"🌍 Environment assessment: Distance={assessment['distance_cm']:.1f}cm, Status={'SAFE' if assessment['safe_distance'] else 'TOO CLOSE' if assessment['too_close'] else 'MODERATE'}")
         
         # Prepare context for image analysis
         context = f"""I am a Picar-X robot assessing my current environment for navigation.
@@ -831,36 +867,52 @@ def main():
             if user_input.lower() == 'quit':
                 break
             elif user_input.lower() == 'reset':
+                print(f"🔄 EXECUTING RESET COMMAND")
                 result = Runner.run_sync(agent, "Reset the robot", session=session)
+                print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
                 print(f"Agent: {result.final_output}")
                 continue
             elif user_input.lower() == 'status':
+                print(f"📊 EXECUTING STATUS COMMAND")
                 result = Runner.run_sync(agent, "Get the current task status", session=session)
+                print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
                 print(f"Agent: {result.final_output}")
                 continue
             elif user_input.lower() == 'memory':
+                print(f"🧠 EXECUTING MEMORY COMMAND")
                 result = Runner.run_sync(agent, "Tell me what you remember about our previous conversations and interactions", session=session)
+                print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
                 print(f"Agent: {result.final_output}")
                 continue
             elif user_input.lower() == 'check':
+                print(f"🔍 EXECUTING CHECK DIRECTION COMMAND")
                 result = Runner.run_sync(agent, "Check the current direction for potential exits", session=session)
+                print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
                 print(f"Agent: {result.final_output}")
                 continue
             elif user_input.lower() == 'turn right':
+                print(f"↪️ EXECUTING TURN RIGHT COMMAND")
                 result = Runner.run_sync(agent, "Turn right in place 45 degrees", session=session)
+                print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
                 print(f"Agent: {result.final_output}")
                 continue
             elif user_input.lower() == 'turn left':
+                print(f"↩️ EXECUTING TURN LEFT COMMAND")
                 result = Runner.run_sync(agent, "Turn left in place 45 degrees", session=session)
+                print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
                 print(f"Agent: {result.final_output}")
                 continue
             elif user_input.lower() == 'report':
+                print(f"📊 EXECUTING REPORT COMMAND")
                 result = Runner.run_sync(agent, "Prepare an analysis report for the current images and sensor data", session=session)
+                print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
                 print(f"Agent: {result.final_output}")
                 continue
             elif user_input.lower().startswith('execute:'):
                 command = user_input[8:].strip()  # Remove 'execute:' prefix
+                print(f"⚡ EXECUTING NAVIGATION COMMAND: '{command}'")
                 result = Runner.run_sync(agent, f"Execute this navigation command: {command}", session=session)
+                print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
                 print(f"Agent: {result.final_output}")
                 continue
             elif "escape" in user_input.lower() or "room" in user_input.lower():
@@ -872,10 +924,25 @@ def main():
             # Send message to agent with session for memory
             print("Agent: ", end="", flush=True)
             try:
+                print(f"\n🚀 SENDING TO MAIN AGENT: '{user_input}'")
+                print(f"📝 Session ID: {session.session_id if session else 'None'}")
+                
                 result = Runner.run_sync(agent, user_input, session=session)
+                
+                print(f"✅ MAIN AGENT RESPONSE RECEIVED")
+                print(f"📊 Result type: {type(result)}")
+                print(f"🔧 Tools called: {getattr(result, 'tool_calls', 'None')}")
+                print(f"💬 Response length: {len(result.final_output)} characters")
+                print(f"📋 Agent response:")
+                print("-" * 30)
                 print(result.final_output)
+                print("-" * 30)
+                
             except Exception as e:
-                print(f"Error getting response: {str(e)}")
+                print(f"❌ ERROR getting response: {str(e)}")
+                import traceback
+                print(f"🔍 Full traceback:")
+                traceback.print_exc()
             print()
             
     except KeyboardInterrupt:
