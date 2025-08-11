@@ -176,33 +176,53 @@ def get_servo_angles_tool() -> str:
         return f"Error getting servo angles: {str(e)}"
 
 @function_tool
-def scan_360_tool(photos_per_direction: int = 1) -> str:
-    """Perform a true 360-degree scan by rotating the robot in place and taking photos in all directions."""
+def turn_in_place_right_tool(degrees: float = 45) -> str:
+    """Turn right in place by specified degrees (default 45°)."""
     try:
-        scan_results = scan_360_with_rotation(photos_per_direction)
-        
-        result_text = f"360-degree rotation scan completed. Results:\n"
-        photo_files = []
-        
-        for result in scan_results:
-            result_text += f"- {result['direction']}: {result['distance_cm']:.1f}cm, "
-            result_text += f"{'CLEAR' if result['is_clear'] else 'BLOCKED'}, "
-            result_text += f"{'EXIT CANDIDATE' if result['is_exit_candidate'] else 'NO EXIT'}\n"
-            result_text += f"  Photos: {', '.join(result['photos'])}\n"
-            photo_files.extend(result['photos'])
-        
-        # Find best exit direction based on sensor data
-        best_exit = find_best_exit_direction(scan_results)
-        if best_exit:
-            result_text += f"\nSensor-based recommendation: {best_exit['direction']} ({best_exit['reason']})\n"
-            result_text += f"Key photos to upload for visual analysis: {', '.join(best_exit['photos'])}\n"
-        
-        result_text += f"\nAll photos saved: {', '.join(photo_files)}\n"
-        result_text += "Upload any photos to get visual analysis for navigation decisions."
-        
-        return result_text
+        success = turn_in_place_right(degrees)
+        if success:
+            return f"Turned right {degrees}° in place"
+        else:
+            return f"Failed to turn right {degrees}°"
     except Exception as e:
-        return f"Error during 360 rotation scan: {str(e)}"
+        return f"Error turning right: {str(e)}"
+
+@function_tool
+def turn_in_place_left_tool(degrees: float = 45) -> str:
+    """Turn left in place by specified degrees (default 45°)."""
+    try:
+        success = turn_in_place_left(degrees)
+        if success:
+            return f"Turned left {degrees}° in place"
+        else:
+            return f"Failed to turn left {degrees}°"
+    except Exception as e:
+        return f"Error turning left: {str(e)}"
+
+@function_tool
+def check_current_direction_tool() -> str:
+    """Take a photo and check ultrasound in current direction to assess if it's an exit."""
+    try:
+        result = check_current_direction()
+        
+        response = f"Direction Assessment:\n"
+        response += f"- Photo saved: {result['photo_filename']}\n"
+        response += f"- Distance: {result['distance_cm']:.1f}cm\n"
+        response += f"- Status: {result['assessment']}\n"
+        
+        if result['is_exit_candidate']:
+            response += "- This direction looks like a potential EXIT!\n"
+            response += "- Upload the photo for visual confirmation\n"
+        elif result['is_clear']:
+            response += "- Path appears clear but may not be an exit\n"
+            response += "- Upload the photo to analyze what's ahead\n"
+        else:
+            response += "- Path is blocked, consider turning to find another direction\n"
+        
+        return response
+        
+    except Exception as e:
+        return f"Error checking current direction: {str(e)}"
 
 @function_tool
 def move_backward_safe_tool(distance_cm: float = 20, speed: int = 30) -> str:
@@ -250,42 +270,7 @@ def rotate_in_place_tool(degrees: float, speed: int = 30) -> str:
     except Exception as e:
         return f"Error rotating in place: {str(e)}"
 
-@function_tool
-def find_exit_and_navigate_tool() -> str:
-    """Perform 360° scan to find exits, then navigate toward the best option."""
-    try:
-        # Perform 360-degree scan
-        scan_results = scan_360_with_rotation(1)
-        
-        # Find best exit
-        best_exit = find_best_exit_direction(scan_results)
-        
-        if not best_exit:
-            return "No viable exit directions found"
-        
-        result = f"Exit analysis complete:\n"
-        result += f"Best direction: {best_exit['direction']} ({best_exit['distance_cm']:.1f}cm)\n"
-        result += f"Reason: {best_exit['reason']}\n"
-        
-        # If we're not already facing the best direction, rotate to face it
-        # Assuming we start facing North after the 360 scan
-        if best_exit['direction'] != 'North':
-            rotate_success = rotate_to_direction(best_exit['direction'], 'North')
-            if rotate_success:
-                result += f"Rotated to face {best_exit['direction']}\n"
-            else:
-                result += f"Failed to rotate to {best_exit['direction']}\n"
-        
-        # If it's a clear path, suggest moving forward
-        if best_exit['is_clear']:
-            result += "Path is clear - ready to move forward"
-        else:
-            result += "Path has obstacles - proceed with caution"
-        
-        return result
-        
-    except Exception as e:
-        return f"Error in exit finding and navigation: {str(e)}"
+
 
 @function_tool
 def analyze_image_tool(filename: str = "img_capture.jpg") -> str:
@@ -427,13 +412,13 @@ def create_plan_tool(task_description: str) -> str:
             task_plan = [
                 "1. Assess current environment with photo and sensors",
                 "2. If too close to obstacles, move backward to safe distance",
-                "3. Perform 360-degree scan by rotating in place and taking photos",
-                "4. Analyze scan results to find best exit direction",
-                "5. Rotate to face the best exit direction",
-                "6. Move forward toward exit if path is clear",
-                "7. Reassess environment after each movement",
-                "8. If blocked, find open space and repeat 360-scan",
-                "9. Continue until exit is found"
+                "3. Check current direction for potential exits",
+                "4. If no exit found, turn in place and check new direction",
+                "5. Continue turning and checking until exit candidate found",
+                "6. Upload photos for visual confirmation of exit",
+                "7. Move forward toward confirmed exit",
+                "8. Reassess environment after movement",
+                "9. Repeat process if path becomes blocked"
             ]
         elif "explore" in task_description.lower():
             task_plan = [
@@ -544,18 +529,18 @@ def create_advanced_agent():
         
         You have access to the following capabilities:
         - Movement: drive_forward, drive_backward, stop, move_backward_safe
-        - Rotation: rotate_in_place (safe in-place rotation), turn_left/turn_right (avoid - these move forward)
+        - Turning: turn_in_place_right, turn_in_place_left (safe in-place rotation)
         - Servos: set_dir_servo (steering), set_cam_pan_servo, set_cam_tilt_servo, get_servo_angles
         - Sensors: get_ultrasound (distance), get_grayscale (line following)
         - Camera: init_camera, capture_image, assess_environment
-        - Navigation: scan_360 (true 360° by rotating robot), find_exit_and_navigate
+        - Navigation: check_current_direction (photo + ultrasound assessment)
         - Audio: play_sound
         - Planning: create_plan, execute_plan_step
         
         CRITICAL SAFETY RULES:
         1. NEVER use turn_left or turn_right - they move forward and can hit obstacles
-        2. Use rotate_in_place_tool for all turning - it's safe and doesn't move forward
-        3. Use scan_360_tool for true 360° scanning - it rotates the robot and takes photos in all directions
+        2. Use turn_in_place_right_tool or turn_in_place_left_tool for all turning - they're safe
+        3. Use check_current_direction_tool to assess each direction (photo + ultrasound)
         4. After every movement, use assess_environment_tool to take a photo and check sensors
         5. If distance sensor shows < 15cm, move backward using move_backward_safe_tool
         
@@ -563,18 +548,18 @@ def create_advanced_agent():
         1. Initialize camera system
         2. Assess current environment
         3. If too close to obstacles, move backward to safe distance
-        4. Use scan_360_tool - this rotates the robot 90° at a time, taking photos in each direction
-        5. The scan identifies North/East/South/West directions and finds the best exit
-        6. Use find_exit_and_navigate_tool for complete exit analysis and positioning
-        7. Move forward only when facing a clear direction
-        8. If no clear exit found, move to the most open space and repeat scan
+        4. Use check_current_direction_tool to assess current direction
+        5. If current direction shows an exit candidate, upload photo for visual confirmation
+        6. If no exit found, use turn_in_place_right_tool or turn_in_place_left_tool to turn
+        7. Repeat checking directions until an exit is found
+        8. Move forward only when facing a confirmed clear direction
         
-        The 360° scan works by:
-        - Taking photo facing current direction
-        - Rotating 90° clockwise in place
-        - Taking photo in new direction
-        - Repeating until full 360° coverage
-        - Saving photos for manual upload and analysis
+        Simple exit finding process:
+        - Check current direction (photo + ultrasound)
+        - If blocked or no exit, turn in place (45° increments)
+        - Check new direction
+        - Repeat until exit candidate found
+        - Upload photos for human visual analysis and confirmation
         
         EXTERNAL ANALYSIS WORKFLOW:
         - Use prepare_analysis_report_tool to generate comprehensive sensor + image report
@@ -601,9 +586,9 @@ def create_advanced_agent():
             init_camera_tool,
             capture_image_tool,
             get_servo_angles_tool,
-            scan_360_tool,
-            rotate_in_place_tool,
-            find_exit_and_navigate_tool,
+            turn_in_place_right_tool,
+            turn_in_place_left_tool,
+            check_current_direction_tool,
             move_backward_safe_tool,
             assess_environment_tool,
             analyze_image_tool,
@@ -658,7 +643,9 @@ def main():
     print("  'reset' - Reset the robot")
     print("  'status' - Check task status")
     print("  'memory' - Test memory functionality")
-    print("  'scan' - Perform 360° scan and prepare analysis report")
+    print("  'check' - Check current direction for exits")
+    print("  'turn right' - Turn right in place")
+    print("  'turn left' - Turn left in place")
     print("  'report' - Generate analysis report for current images")
     print("  'execute: [command]' - Execute navigation command from analysis")
     print("  'escape room' - Complex task example")
@@ -684,8 +671,16 @@ def main():
                 result = Runner.run_sync(agent, "Tell me what you remember about our previous conversations and interactions", session=session)
                 print(f"Agent: {result.final_output}")
                 continue
-            elif user_input.lower() == 'scan':
-                result = Runner.run_sync(agent, "Perform a 360-degree scan and then prepare an analysis report", session=session)
+            elif user_input.lower() == 'check':
+                result = Runner.run_sync(agent, "Check the current direction for potential exits", session=session)
+                print(f"Agent: {result.final_output}")
+                continue
+            elif user_input.lower() == 'turn right':
+                result = Runner.run_sync(agent, "Turn right in place 45 degrees", session=session)
+                print(f"Agent: {result.final_output}")
+                continue
+            elif user_input.lower() == 'turn left':
+                result = Runner.run_sync(agent, "Turn left in place 45 degrees", session=session)
                 print(f"Agent: {result.final_output}")
                 continue
             elif user_input.lower() == 'report':
