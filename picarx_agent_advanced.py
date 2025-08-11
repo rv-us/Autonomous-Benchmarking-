@@ -259,17 +259,17 @@ def upload_image_with_context(filename: str, context: str) -> str:
             image_data = image_file.read()
             base64_image = base64.b64encode(image_data).decode('utf-8')
         
-        # Create the message with image using OpenAI Agents SDK format
+        # Create the message with image using proper Responses API format for Agents SDK
         message_with_image = [
             {
-                "type": "text",
-                "text": context
-            },
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}"
-                }
+                "role": "user",
+                "content": [
+                    {"type": "input_text", "text": context},
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:image/jpeg;base64,{base64_image}"
+                    }
+                ]
             }
         ]
         
@@ -292,8 +292,14 @@ def upload_image_with_context(filename: str, context: str) -> str:
             Be specific, actionable, and safety-focused in your guidance. The robot needs clear instructions."""
         )
         
-        # Send the image for analysis
-        result = Runner.run_sync(analysis_agent, message_with_image)
+        # Send the image for analysis with vision-capable model
+        from agents import RunConfig
+        
+        run_config = RunConfig(
+            model="gpt-4o-mini"  # Ensure we use a vision-capable model
+        )
+        
+        result = Runner.run_sync(analysis_agent, message_with_image, run_config=run_config)
         
         analysis_result = result.final_output
         
