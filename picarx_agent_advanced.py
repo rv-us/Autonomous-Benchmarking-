@@ -273,21 +273,22 @@ def upload_image_with_context(filename: str, context: str) -> str:
         print(f"📤 Encoding image as base64...")
         print(f"✅ Image encoded, size: {len(base64_image)} characters")
         
-        # Create the message with image using proper Agents SDK format
+        # Create the message with image using correct Agents SDK format (from official docs)
         message_with_image = [
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "input_image",
+                        "detail": "auto",
                         "image_url": f"data:image/jpeg;base64,{base64_image}",
-                    },
-                    {
-                        "type": "input_text",
-                        "text": context,
-                    },
-                ]
-            }
+                    }
+                ],
+            },
+            {
+                "role": "user",
+                "content": context,
+            },
         ]
         
         # Create a simple analysis agent for this specific image (following gpt_car.py pattern)
@@ -320,11 +321,18 @@ def upload_image_with_context(filename: str, context: str) -> str:
         print(f"📸 Image: {filename}")
         print(f"📝 Context length: {len(context)} characters")
         print(f"🤖 Model: gpt-4o")
-        print(f"📋 Message format: input_image with base64 (official Agents SDK format)")
+        print(f"📋 Message format: Two separate user messages (image + text)")
         print(f"🔧 Base64 length: {len(base64_image)} characters")
+        print(f"🎯 Detail level: auto")
         
-        # Use run_sync for synchronous execution (compatible with our current setup)
-        result = Runner.run_sync(analysis_agent, message_with_image, run_config=run_config)
+        # Use async Runner.run as shown in official documentation
+        import asyncio
+        
+        async def analyze_image_async():
+            return await Runner.run(analysis_agent, message_with_image, run_config=run_config)
+        
+        # Run the async function
+        result = asyncio.run(analyze_image_async())
         
         print(f"✅ ANALYSIS AGENT RESPONSE RECEIVED")
         print(f"📊 Result type: {type(result)}")
