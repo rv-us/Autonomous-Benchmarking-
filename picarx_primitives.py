@@ -209,12 +209,14 @@ def rotate_in_place(degrees: float, speed: int = 30) -> bool:
             px.set_dir_servo_angle(30)  # Max right steering
             _servo_angles['dir_servo'] = 30
             # Use differential motor speeds for in-place rotation
-            px.set_motor_speed([1, 2], [speed, -speed])  # Right forward, left backward
+            px.set_motor_speed(1, speed)   # Left motor forward
+            px.set_motor_speed(2, -speed)  # Right motor backward
         else:  # Counter-clockwise rotation
             px.set_dir_servo_angle(-30)  # Max left steering
             _servo_angles['dir_servo'] = -30
             # Use differential motor speeds for in-place rotation
-            px.set_motor_speed([1, 2], [-speed, speed])  # Left forward, right backward
+            px.set_motor_speed(1, -speed)  # Left motor backward
+            px.set_motor_speed(2, speed)   # Right motor forward
         
         # Calculate rotation duration (this needs calibration for your specific robot)
         # Rough estimate: 90 degrees takes about 1 second at speed 30
