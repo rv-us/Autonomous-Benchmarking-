@@ -245,10 +245,11 @@ Based on your analysis, provide specific navigation instructions."""
 
 @function_tool
 def upload_image_with_context(filename: str, context: str) -> str:
-    """Upload an image file with contextual information for analysis."""
+    """Upload an image file with contextual information for analysis using OpenAI Agents SDK."""
     try:
         import os
         import base64
+        from agents import Agent, Runner
         
         if not os.path.exists(filename):
             return f"Image file {filename} not found"
@@ -258,29 +259,48 @@ def upload_image_with_context(filename: str, context: str) -> str:
             image_data = image_file.read()
             base64_image = base64.b64encode(image_data).decode('utf-8')
         
-        # This is where we would integrate with your chat system
-        # For now, we'll return a message indicating the upload attempt
-        upload_message = f"""
-🤖 ROBOT IMAGE UPLOAD 🤖
-
-Context: {context}
-
-Image: {filename}
-Size: {len(image_data)} bytes
-Encoding: base64
-
-[Image would be uploaded here with the above context]
-
-Please analyze the uploaded image and provide navigation guidance.
-"""
+        # Create the message with image using OpenAI Agents SDK format
+        message_with_image = [
+            {
+                "type": "text",
+                "text": context
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{base64_image}"
+                }
+            }
+        ]
         
-        # In a real implementation, this would actually upload to the chat
-        print(upload_message)  # For debugging
+        # Create a simple analysis agent for this specific image
+        from keys import OPENAI_API_KEY
         
-        return f"Image {filename} uploaded with context for analysis"
+        os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+        
+        analysis_agent = Agent(
+            name="Robot Navigation Image Analyzer",
+            instructions="""You are an expert at analyzing images for robot navigation and escape room scenarios.
+            
+            When given an image from a Picar-X robot, analyze it carefully and provide:
+            1. What you see in the image (exits, doorways, obstacles, walls, furniture, paths)
+            2. Specific navigation recommendations (move forward X cm, turn left/right Y degrees, stop, back up)
+            3. Safety considerations and potential hazards
+            4. Distance estimates for objects and clearances
+            5. Whether this direction appears to be a viable exit
+            
+            Be specific, actionable, and safety-focused in your guidance. The robot needs clear instructions."""
+        )
+        
+        # Send the image for analysis
+        result = Runner.run_sync(analysis_agent, message_with_image)
+        
+        analysis_result = result.final_output
+        
+        return f"🤖 IMAGE ANALYSIS COMPLETE 🤖\n\nFile: {filename}\nAnalysis:\n{analysis_result}\n\nUse this guidance to navigate the robot safely."
         
     except Exception as e:
-        return f"Error uploading image: {str(e)}"
+        return f"Error uploading and analyzing image: {str(e)}"
 
 @function_tool
 def receive_navigation_guidance_tool(guidance: str) -> str:
