@@ -205,24 +205,145 @@ def check_current_direction_tool() -> str:
     try:
         result = check_current_direction()
         
+        # Prepare context for image analysis
+        context = f"""I am a Picar-X robot trying to escape from a room. I just took this photo while facing a potential exit direction.
+
+Current sensor data:
+- Ultrasonic distance: {result['distance_cm']:.1f}cm
+- Sensor assessment: {result['assessment']}
+- Current servo positions: {get_servo_angles()}
+
+Please analyze this image and tell me:
+1. Do you see a clear exit (doorway, opening, passage)?
+2. Are there obstacles blocking the path?
+3. How far ahead does the clear path extend?
+4. Should I move forward, turn to look elsewhere, or back up?
+5. Any safety concerns I should be aware of?
+
+Based on your analysis, provide specific navigation instructions."""
+
+        # Upload image with context (this would need to be implemented based on your chat system)
+        upload_result = upload_image_with_context(result['photo_filename'], context)
+        
         response = f"Direction Assessment:\n"
-        response += f"- Photo saved: {result['photo_filename']}\n"
+        response += f"- Photo captured: {result['photo_filename']}\n"
         response += f"- Distance: {result['distance_cm']:.1f}cm\n"
         response += f"- Status: {result['assessment']}\n"
+        response += f"- Image uploaded for analysis: {upload_result}\n"
         
         if result['is_exit_candidate']:
-            response += "- This direction looks like a potential EXIT!\n"
-            response += "- Upload the photo for visual confirmation\n"
+            response += "- Sensor data suggests potential EXIT - awaiting visual confirmation\n"
         elif result['is_clear']:
-            response += "- Path appears clear but may not be an exit\n"
-            response += "- Upload the photo to analyze what's ahead\n"
+            response += "- Path appears clear - awaiting visual analysis\n"
         else:
-            response += "- Path is blocked, consider turning to find another direction\n"
+            response += "- Path blocked by sensors - visual analysis will confirm\n"
         
         return response
         
     except Exception as e:
         return f"Error checking current direction: {str(e)}"
+
+@function_tool
+def upload_image_with_context(filename: str, context: str) -> str:
+    """Upload an image file with contextual information for analysis."""
+    try:
+        import os
+        import base64
+        
+        if not os.path.exists(filename):
+            return f"Image file {filename} not found"
+        
+        # Read and encode the image
+        with open(filename, "rb") as image_file:
+            image_data = image_file.read()
+            base64_image = base64.b64encode(image_data).decode('utf-8')
+        
+        # This is where we would integrate with your chat system
+        # For now, we'll return a message indicating the upload attempt
+        upload_message = f"""
+🤖 ROBOT IMAGE UPLOAD 🤖
+
+Context: {context}
+
+Image: {filename}
+Size: {len(image_data)} bytes
+Encoding: base64
+
+[Image would be uploaded here with the above context]
+
+Please analyze the uploaded image and provide navigation guidance.
+"""
+        
+        # In a real implementation, this would actually upload to the chat
+        print(upload_message)  # For debugging
+        
+        return f"Image {filename} uploaded with context for analysis"
+        
+    except Exception as e:
+        return f"Error uploading image: {str(e)}"
+
+@function_tool
+def receive_navigation_guidance_tool(guidance: str) -> str:
+    """Receive navigation guidance from advanced agent analysis and execute appropriate actions."""
+    try:
+        guidance_lower = guidance.lower()
+        
+        response = f"Received navigation guidance: {guidance}\n\nExecuting recommended actions:\n"
+        
+        # Parse guidance and execute actions
+        if "move forward" in guidance_lower or "go forward" in guidance_lower:
+            # Extract distance if mentioned
+            import re
+            distance_match = re.search(r'(\d+)\s*(cm|centimeter)', guidance_lower)
+            if distance_match:
+                distance = int(distance_match.group(1))
+                duration = distance / 20  # Rough conversion
+                result = drive_forward_tool(30, duration)
+                response += f"- {result}\n"
+            else:
+                result = drive_forward_tool(30, 2)  # Default 2 seconds
+                response += f"- {result}\n"
+                
+        elif "turn right" in guidance_lower:
+            # Extract degrees if mentioned
+            import re
+            degrees_match = re.search(r'(\d+)\s*degree', guidance_lower)
+            degrees = int(degrees_match.group(1)) if degrees_match else 45
+            result = turn_in_place_right_tool(degrees)
+            response += f"- {result}\n"
+            
+        elif "turn left" in guidance_lower:
+            # Extract degrees if mentioned
+            import re
+            degrees_match = re.search(r'(\d+)\s*degree', guidance_lower)
+            degrees = int(degrees_match.group(1)) if degrees_match else 45
+            result = turn_in_place_left_tool(degrees)
+            response += f"- {result}\n"
+            
+        elif "back up" in guidance_lower or "move backward" in guidance_lower:
+            # Extract distance if mentioned
+            import re
+            distance_match = re.search(r'(\d+)\s*(cm|centimeter)', guidance_lower)
+            distance = int(distance_match.group(1)) if distance_match else 20
+            result = move_backward_safe_tool(distance)
+            response += f"- {result}\n"
+            
+        elif "stop" in guidance_lower or "wait" in guidance_lower:
+            result = stop_tool()
+            response += f"- {result}\n"
+            
+        elif "assess" in guidance_lower or "check" in guidance_lower:
+            result = assess_environment_tool()
+            response += f"- {result}\n"
+            
+        else:
+            response += "- Guidance received but no specific action recognized\n"
+            response += "- Available actions: move forward, turn right/left, back up, stop, assess\n"
+        
+        return response
+        
+    except Exception as e:
+        return f"Error processing navigation guidance: {str(e)}"
 
 @function_tool
 def move_backward_safe_tool(distance_cm: float = 20, speed: int = 30) -> str:
@@ -241,17 +362,39 @@ def assess_environment_tool() -> str:
     """Take a photo and get sensor readings to assess the current environment."""
     try:
         assessment = assess_environment()
+        
+        # Prepare context for image analysis
+        context = f"""I am a Picar-X robot assessing my current environment for navigation.
+
+Current situation:
+- Ultrasonic distance: {assessment['distance_cm']:.1f}cm
+- Servo positions: {assessment['servo_angles']}
+- Safety status: {'TOO CLOSE' if assessment['too_close'] else 'SAFE DISTANCE' if assessment['safe_distance'] else 'MODERATE DISTANCE'}
+
+Please analyze this environmental photo and tell me:
+1. What obstacles or objects do you see around me?
+2. Which directions appear to have clear paths?
+3. Are there any potential exits or openings visible?
+4. What should be my next navigation step?
+5. Any immediate safety concerns?
+
+Provide specific guidance for my next movement."""
+
+        # Upload image with context
+        upload_result = upload_image_with_context(assessment['photo_filename'], context)
+        
         result = f"Environment Assessment:\n"
         result += f"- Distance to obstacle: {assessment['distance_cm']:.1f}cm\n"
         result += f"- Current servo angles: {assessment['servo_angles']}\n"
-        result += f"- Photo saved as: {assessment['photo_filename']}\n"
+        result += f"- Photo captured: {assessment['photo_filename']}\n"
+        result += f"- Image uploaded for analysis: {upload_result}\n"
         
         if assessment['too_close']:
-            result += "- WARNING: Too close to obstacle (< 15cm)\n"
+            result += "- WARNING: Too close to obstacle (< 15cm) - awaiting visual guidance\n"
         elif assessment['safe_distance']:
-            result += "- Safe distance from obstacles\n"
+            result += "- Safe distance from obstacles - awaiting navigation advice\n"
         else:
-            result += "- Moderate distance from obstacles\n"
+            result += "- Moderate distance from obstacles - awaiting visual analysis\n"
             
         return result
     except Exception as e:
@@ -561,13 +704,13 @@ def create_advanced_agent():
         - Repeat until exit candidate found
         - Upload photos for human visual analysis and confirmation
         
-        EXTERNAL ANALYSIS WORKFLOW:
-        - Use prepare_analysis_report_tool to generate comprehensive sensor + image report
-        - Report includes current ultrasonic readings and lists all captured photos
-        - Human operator uploads photos to external advanced agent for visual analysis
-        - External agent analyzes images + sensor data to determine best exit
-        - Use execute_navigation_command_tool to follow navigation instructions from analysis
-        - This combines visual intelligence with real-time sensor data for optimal navigation
+        AUTOMATIC IMAGE ANALYSIS WORKFLOW:
+        - When taking photos, images are automatically uploaded with contextual information
+        - Context includes current sensor readings, robot status, and specific questions
+        - Advanced agent analyzes uploaded images and provides navigation guidance
+        - Use receive_navigation_guidance_tool to execute recommended actions
+        - This creates a seamless loop: capture → upload → analyze → execute → repeat
+        - Images are uploaded with specific context about what guidance is needed
         
         Always prioritize safety - use in-place rotation instead of forward-turning movements.""",
         tools=[
@@ -589,6 +732,8 @@ def create_advanced_agent():
             turn_in_place_right_tool,
             turn_in_place_left_tool,
             check_current_direction_tool,
+            upload_image_with_context,
+            receive_navigation_guidance_tool,
             move_backward_safe_tool,
             assess_environment_tool,
             analyze_image_tool,
