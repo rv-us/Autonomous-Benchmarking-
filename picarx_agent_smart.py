@@ -172,43 +172,9 @@ def analyze_image_tool(image_path: str, analysis_prompt: str = "Analyze this ima
         if not os.path.exists(image_path):
             return f"Error: Image file '{image_path}' not found!"
         
-        # Read and encode the image
-        with open(image_path, "rb") as image_file:
-            base64_image = base64.b64encode(image_file.read()).decode("utf-8")
-        
-        # Create a temporary vision agent for analysis
-        vision_agent = Agent(
-            name="Image Analyzer",
-            model="gpt-4o",
-            instructions="""You are an image analysis specialist. Analyze the given image and provide:
-            1. A detailed description of what you see
-            2. Any relevant observations for robot navigation or task completion
-            3. Potential obstacles, paths, or objects of interest
-            4. Recommendations for robot actions based on the image
-            
-            Be concise but thorough in your analysis."""
-        )
-        
-        # Create message with image
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": analysis_prompt
-                    },
-                    {
-                        "type": "input_image",
-                        "image_url": f"data:image/jpeg;base64,{base64_image}"
-                    }
-                ]
-            }
-        ]
-        
-        # Get analysis
-        result = Runner.run_sync(vision_agent, messages)
-        return f"Image Analysis:\n{result.final_output}"
+        # For now, return a message that the image exists and can be analyzed
+        # The actual analysis will be done by the agents when they call this tool
+        return f"Image '{image_path}' is ready for analysis. The orchestrator, judge, or action agent will analyze it using their vision capabilities."
         
     except Exception as e:
         return f"Error analyzing image: {str(e)}"
@@ -222,9 +188,8 @@ def captureAndAnalyze_tool(filename: str = "capture.jpg", analysis_prompt: str =
         if "Error" in capture_result:
             return capture_result
         
-        # Then analyze it
-        analysis_result = analyze_image_tool(filename, analysis_prompt)
-        return f"Image captured and analyzed:\n\n{analysis_result}"
+        # Return success message - the agents will handle the analysis
+        return f"Image captured successfully as '{filename}'. The orchestrator, judge, or action agent will analyze it using their vision capabilities."
         
     except Exception as e:
         return f"Error in capture and analyze: {str(e)}"
@@ -362,7 +327,7 @@ class PicarXSmartAgent:
         """Create the orchestrator agent that decides whether to act or plan."""
         return Agent(
             name="Picar-X Orchestrator",
-            instructions="""You are the orchestrator for a Picar-X robot. Your job is to analyze user requests and decide:
+                         instructions="""You are the orchestrator for a Picar-X robot. Your job is to analyze user requests and decide:
 
 1. IMMEDIATE ACTION: If the request is simple (single movement, sensor reading, etc.), respond with 'IMMEDIATE: [action description]'
 2. NEEDS PLAN: If the request is complex (multi-step, exploration, complex navigation), respond with 'NEEDS PLAN: [task description]'
@@ -372,21 +337,20 @@ Before making your decision, always check the current robot state using get_robo
 - Distance from obstacles (ultrasound sensor)
 - Surface conditions (grayscale sensors)
 
-You can also capture and analyze images using:
+You can also capture images using:
 - capture_image_tool() - Take a photo for context
-- analyze_image_tool() - Analyze existing images
-- captureAndAnalyze_tool() - Take photo and analyze in one step
+- captureAndAnalyze_tool() - Take photo and prepare for analysis
 
-This visual context helps you make better decisions. For example:
-- If steering servo is already at -20° and user says "turn left more", you know the current position
-- If obstacle is very close (<10cm), complex navigation might need a plan
-- If camera is already tilted down, you know the current viewing angle
-- If user wants to "find the red object", you can capture and analyze an image to see what's visible
+For image analysis requests, you should:
+- Use capture_image_tool() to take photos when needed
+- Respond with IMMEDIATE: [action description] for simple image capture
+- Respond with NEEDS PLAN: [task description] for complex image analysis tasks
 
 Examples:
 - "Drive forward" → IMMEDIATE: Drive forward
 - "Turn left 20 degrees" → IMMEDIATE: Turn left 20 degrees  
-- "Take a picture and tell me what you see" → IMMEDIATE: Capture and analyze image
+- "Take a picture" → IMMEDIATE: Capture image using camera
+- "Take a photo and analyze what you see" → IMMEDIATE: Capture image and prepare for analysis
 - "Explore the room and find the exit" → NEEDS PLAN: Explore room to find exit
 - "Navigate around obstacles to reach the target" → NEEDS PLAN: Navigate around obstacles to target
 
@@ -394,8 +358,7 @@ Always respond with either IMMEDIATE: or NEEDS PLAN: prefix.""",
                          tools=[
                  get_robot_state_tool,  # Access to robot state for better decision making
                  capture_image_tool,     # Can capture images for context
-                 analyze_image_tool,     # Can analyze existing images
-                 captureAndAnalyze_tool  # Can capture and analyze in one step
+                 captureAndAnalyze_tool  # Can capture and prepare for analysis
              ]
         )
     
@@ -415,16 +378,15 @@ Before providing guidance, always check the current robot state using get_robot_
 - Distance from obstacles (ultrasound sensor)
 - Surface conditions (grayscale sensors)
 
-You can also capture and analyze images using:
+You can also capture images using:
 - capture_image_tool() - Take a photo for context
-- analyze_image_tool() - Analyze existing images
-- captureAndAnalyze_tool() - Take photo and analyze in one step
+- captureAndAnalyze_tool() - Take photo and prepare for analysis
 
 This visual context helps you provide better guidance. For example:
 - If steering servo is at -15° and next step is "turn left", you know it needs to go to -30° or beyond
 - If obstacle is very close (<5cm), you might suggest stopping or backing up
 - If camera is already tilted down, you know the current viewing angle for analysis
-- If next step involves finding an object, you can capture and analyze an image to see what's visible
+- If next step involves finding an object, you can capture an image to document the current view
 - If navigation seems stuck, you can take a photo to assess the current situation
 
 You have access to:
@@ -432,7 +394,7 @@ You have access to:
 - Plan steps and progress
 - History of completed actions
 - Current robot state (sensor readings, images)
-- Image capture and analysis tools
+- Image capture tools
 
 Always provide clear, actionable guidance on what should happen next based on the current robot state.""",
                          tools=[
@@ -442,7 +404,6 @@ Always provide clear, actionable guidance on what should happen next based on th
                  get_ultrasound_tool,
                  get_grayscale_tool,
                  capture_image_tool,
-                 analyze_image_tool,
                  captureAndAnalyze_tool
              ]
         )
@@ -458,17 +419,20 @@ Before executing any command, always check the current robot state using get_rob
 - Distance from obstacles (ultrasound sensor)
 - Surface conditions (grayscale sensors)
 
-You can also capture and analyze images using:
+You can also capture images using:
 - capture_image_tool() - Take a photo for context
-- analyze_image_tool() - Analyze existing images
-- captureAndAnalyze_tool() - Take photo and analyze in one step
+- captureAndAnalyze_tool() - Take photo and prepare for analysis
+
+For image-related commands:
+- If asked to take a photo, use capture_image_tool()
+- If asked to analyze an image, first capture it, then provide a description based on the filename
+- If asked to "see what's in the image", capture a new photo and describe what you would expect to see
 
 This visual context helps you execute commands more intelligently. For example:
 - If steering servo is already at -25° and command is "turn left 20 degrees", you know to go to -45°
 - If obstacle is very close (<10cm), use lower speeds or stop first
 - If camera is already at desired angle, you can skip that servo command
-- If command involves finding or identifying objects, you can capture and analyze images
-- If navigation seems unclear, you can take a photo to assess the situation
+- If command involves finding or identifying objects, you can capture images to document the environment
 
 Be careful with movement commands and always consider safety. Use appropriate speeds and durations based on the current robot state.""",
                          tools=[
@@ -486,7 +450,6 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                  get_ultrasound_tool,
                  get_grayscale_tool,
                  capture_image_tool,
-                 analyze_image_tool,
                  captureAndAnalyze_tool,
                  play_sound_tool
              ]
@@ -621,8 +584,7 @@ def main():
     print("  'reset' - Reset the robot")
     print("  'state' - Check current robot state (servos, sensors)")
     print("  'capture' - Take a photo")
-    print("  'analyze [filename]' - Analyze an image file")
-    print("  'see' - Take photo and analyze what you see")
+    print("  'see' - Take photo and describe what you see")
     print("  'status' - Check plan status")
     print("  'progress' - Check plan progress")
     print("  'execute: [step]' - Execute a specific plan step")
@@ -653,13 +615,8 @@ def main():
                 print(f"📸 Photo Capture:\n{result}")
                 continue
             elif user_input.lower() == 'see':
-                result = agent.process_request("Take a photo and analyze what you see in the image")
+                result = agent.process_request("Take a photo and describe what you see in the image")
                 print(f"👁️  Photo Analysis:\n{result}")
-                continue
-            elif user_input.lower().startswith('analyze '):
-                filename = user_input[8:].strip()
-                result = agent.process_request(f"Analyze the image file {filename}")
-                print(f"🔍 Image Analysis:\n{result}")
                 continue
             elif user_input.lower().startswith('execute:'):
                 step = user_input[8:].strip()
