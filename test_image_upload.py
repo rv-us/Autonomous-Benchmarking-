@@ -49,11 +49,11 @@ async def test_image_upload(image_path: str):
                 "role": "user",
                 "content": [
                     {
-                        "type": "text",
+                        "type": "input_text",
                         "text": "Please analyze this image and tell me what you see."
                     },
                     {
-                        "type": "image_url",
+                        "type": "input_image",
                         "image_url": {
                             "url": f"data:image/jpeg;base64,{base64_image}"
                         }
