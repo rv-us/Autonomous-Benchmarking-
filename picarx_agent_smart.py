@@ -369,6 +369,7 @@ For image analysis requests, you should:
 - Use capture_image_tool() to take photos when needed
 - Respond with IMMEDIATE: [action description] for simple image capture
 - Respond with IMMEDIATE: [action description] for image analysis requests (they are simple tasks)
+- For "analyze" commands, respond with IMMEDIATE: Analyze the image with the provided context
 
 Examples:
 - "Drive forward" → IMMEDIATE: Drive forward
@@ -461,6 +462,13 @@ When analyzing images:
 - If the image filename is "capture.jpg", describe what a typical camera capture would show
 - If asked to analyze a specific image, describe what you would expect to see in that type of image
 - Always be helpful and provide meaningful descriptions
+
+IMPORTANT: You can now receive image messages directly from the user. When you receive an image:
+- Analyze the image content thoroughly
+- Provide detailed descriptions of what you see
+- Include relevant observations for robot navigation or task completion
+- Consider the context provided with the image
+- Suggest potential robot actions based on what you observe
 
 This visual context helps you execute commands more intelligently. For example:
 - If steering servo is already at -25° and command is "turn left 20 degrees", you know to go to -45°
@@ -597,6 +605,52 @@ Be careful with movement commands and always consider safety. Use appropriate sp
             return result.final_output
         except Exception as e:
             return f"❌ Error getting robot state: {str(e)}"
+    
+    def capture_and_analyze_image(self, context: str = "Analyze this image and describe what you see") -> str:
+        """Capture an image and immediately send it to the action agent for analysis with context."""
+        try:
+            # Step 1: Capture the image
+            filename = f"capture_{int(time.time())}.jpg"
+            capture_result = capture_image_tool(filename)
+            if "Error" in capture_result:
+                return f"❌ Error capturing image: {capture_result}"
+            
+            # Step 2: Read and encode the image
+            if not os.path.exists(filename):
+                return f"❌ Error: Image file '{filename}' not found after capture!"
+            
+            with open(filename, "rb") as image_file:
+                base64_image = base64.b64encode(image_file.read()).decode("utf-8")
+            
+            # Step 3: Create message with image and context for the action agent
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": f"Context: {context}\n\nPlease analyze this image and provide a detailed description of what you see, including any relevant observations for robot navigation or task completion."
+                        },
+                        {
+                            "type": "input_image",
+                            "image_url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    ]
+                }
+            ]
+            
+            # Step 4: Send to action agent for analysis
+            print(f"📸 Image captured as '{filename}', sending to action agent for analysis...")
+            result = Runner.run_sync(
+                self.action_agent,
+                messages,
+                session=self.session
+            )
+            
+            return f"✅ Image Analysis Complete:\n\n{result.final_output}"
+            
+        except Exception as e:
+            return f"❌ Error in capture and analyze: {str(e)}"
 
 # ============================================================================
 # MAIN FUNCTION
@@ -620,6 +674,7 @@ def main():
     print("  'state' - Check current robot state (servos, sensors)")
     print("  'capture' - Take a photo")
     print("  'see' - Take photo and describe what you see")
+    print("  'analyze [context]' - Take photo and analyze with specific context")
     print("  'status' - Check plan status")
     print("  'progress' - Check plan progress")
     print("  'execute: [step]' - Execute a specific plan step")
@@ -650,8 +705,13 @@ def main():
                 print(f"📸 Photo Capture:\n{result}")
                 continue
             elif user_input.lower() == 'see':
-                result = agent.process_request("Take a photo and describe what you see in the image")
+                result = agent.capture_and_analyze_image("Take a photo and describe what you see in the image")
                 print(f"👁️  Photo Analysis:\n{result}")
+                continue
+            elif user_input.lower().startswith('analyze '):
+                context = user_input[8:].strip()
+                result = agent.capture_and_analyze_image(context)
+                print(f"🔍 Image Analysis:\n{result}")
                 continue
             elif user_input.lower().startswith('execute:'):
                 step = user_input[8:].strip()
