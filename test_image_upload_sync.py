@@ -79,10 +79,8 @@ def test_multiple_images():
     
     # Test scenarios
     test_cases = [
-        "test.jpg",
-        "test.png", 
-        "img_imput.jpg",  # Using the existing image from your project
-        "capture.jpg"     # Common capture filename
+        "env_capture.jpg",
+        "environment_capture.jpg", 
     ]
     
     for image_path in test_cases:
