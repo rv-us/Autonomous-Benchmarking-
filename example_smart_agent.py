@@ -10,6 +10,9 @@ import os
 from picarx_agent_smart import PicarXSmartAgent
 from keys import OPENAI_API_KEY
 
+# Set the environment variable for OpenAI Agents SDK
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
 def main():
     """Example usage of the smart Picar-X agent."""
     # Check for API key

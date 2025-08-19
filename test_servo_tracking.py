@@ -10,6 +10,9 @@ import sys
 from picarx_agent_smart import PicarXSmartAgent, get_robot_state_tool
 from keys import OPENAI_API_KEY
 
+# Set the environment variable for OpenAI Agents SDK
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
 def test_servo_tracking():
     """Test the servo angle tracking functionality."""
     print("Testing Servo Angle Tracking")

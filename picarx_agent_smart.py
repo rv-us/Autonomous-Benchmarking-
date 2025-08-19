@@ -22,6 +22,9 @@ import io
 from picarx_primitives import *
 from keys import OPENAI_API_KEY
 
+# Set the environment variable for OpenAI Agents SDK
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
 # Global variables for task state
 current_task = None
 task_plan = []

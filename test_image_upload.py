@@ -12,6 +12,9 @@ import sys
 from agents import Agent, Runner
 from keys import OPENAI_API_KEY
 
+# Set the environment variable for OpenAI Agents SDK
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
 async def test_image_upload(image_path: str):
     """Test uploading an image to the chat."""
     print(f"Testing image upload with: {image_path}")
