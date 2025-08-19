@@ -214,7 +214,7 @@ def analyze_image_tool(image_path: str, analysis_prompt: str = "Analyze this ima
         return f"Error analyzing image: {str(e)}"
 
 @function_tool
-def capture_andAnalyze_tool(filename: str = "capture.jpg", analysis_prompt: str = "Analyze this image and describe what you see") -> str:
+def captureAndAnalyze_tool(filename: str = "capture.jpg", analysis_prompt: str = "Analyze this image and describe what you see") -> str:
     """Capture an image and immediately analyze it using GPT-4o vision."""
     try:
         # First capture the image
