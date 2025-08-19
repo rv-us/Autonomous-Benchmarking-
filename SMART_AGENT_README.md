@@ -70,6 +70,9 @@ python picarx_agent_smart.py
 - `quit` - Exit the program
 - `reset` - Reset the robot
 - `state` - Check current robot state (servos, sensors)
+- `capture` - Take a photo using the camera
+- `analyze [filename]` - Analyze an image file using GPT-4o vision
+- `see` - Take photo and analyze what you see
 - `status` - Check current plan status
 - `progress` - Get detailed progress report
 - `execute: [step]` - Execute a specific plan step
@@ -133,6 +136,8 @@ User Request → Orchestrator → Decision → Action/Planning
 - `get_ultrasound_tool()`
 - `get_grayscale_tool()`
 - `capture_image_tool(filename)`
+- `analyze_image_tool(image_path, analysis_prompt)` - Analyze images using GPT-4o vision
+- `captureAndAnalyze_tool(filename, analysis_prompt)` - Capture and analyze in one step
 - `play_sound_tool(filename, volume)`
 
 ### Planning Tools
@@ -223,6 +228,23 @@ Action Agent: Executes turn_left_tool(20) → goes to -35°
 Result: "✅ Action completed: Turned left 20 degrees from -15° to -35°"
 ```
 
+### Scenario 5: Image Analysis and Vision
+```
+User: "Take a photo and tell me what you see"
+Orchestrator: "IMMEDIATE: Capture and analyze image"
+Action Agent: Executes captureAndAnalyze_tool()
+Result: "Image captured and analyzed: [GPT-4o vision analysis]"
+```
+
+### Scenario 6: Vision-Guided Navigation
+```
+User: "Find the red object in the room"
+Orchestrator: "NEEDS PLAN: Navigate to find red object using vision"
+Action Agent: Creates plan with image capture steps
+Judge Agent: Monitors progress, suggests when to take photos
+Result: Systematic search using visual feedback
+```
+
 ## 🚨 Safety Features
 
 - **Speed Limits**: All movement functions capped at 0-100 range
@@ -283,14 +305,49 @@ print(f"Debug: Action result: {result}")
 3. **Session Management**: Use meaningful session IDs for different use cases
 4. **Error Handling**: Always check the return values for error messages
 5. **Safety First**: Use appropriate speeds and always have a reset command ready
+6. **Vision Integration**: Use image analysis for better navigation and object recognition
+7. **Image Quality**: Ensure good lighting and camera positioning for best analysis results
+
+## 🖼️ Image Analysis Capabilities
+
+The smart agent now includes advanced vision capabilities using GPT-4o:
+
+### Image Tools
+- **`capture_image_tool(filename)`**: Take a photo and save it
+- **`analyze_image_tool(image_path, prompt)`**: Analyze existing images with custom prompts
+- **`captureAndAnalyze_tool(filename, prompt)`**: Capture and analyze in one efficient step
+
+### Vision-Enhanced Decision Making
+- **Obstacle Detection**: Analyze images to identify obstacles and safe paths
+- **Object Recognition**: Find and identify objects in the environment
+- **Navigation Assistance**: Use visual feedback for better movement decisions
+- **Task Verification**: Confirm task completion through visual inspection
+
+### Example Vision Commands
+```bash
+# Take a photo
+capture
+
+# Analyze what you see
+see
+
+# Analyze specific image file
+analyze my_photo.jpg
+
+# Complex vision tasks
+"Find the red ball in the room"
+"Navigate around the chair I can see"
+"Take a picture and tell me if the path is clear"
+```
 
 ## 🔮 Future Enhancements
 
 - **Voice Integration**: Add speech recognition and TTS
-- **Vision Processing**: Integrate with GPT-4o for image analysis
+- **Advanced Vision**: Multi-camera support and real-time video analysis
 - **Learning**: Improve decision-making based on past experiences
 - **Multi-Robot**: Support for coordinating multiple robots
 - **Web Interface**: Browser-based control panel
+- **Gesture Recognition**: Understand human gestures and commands
 
 ## 📚 Related Files
 

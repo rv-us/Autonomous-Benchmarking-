@@ -54,14 +54,19 @@ def main():
     result = agent.get_current_robot_state()
     print(f"Robot State: {result}")
     
-    # Example 6: Another simple command
-    print("\nExample 6: Another simple command - 'Turn left 45 degrees'")
+    # Example 6: Image capture and analysis
+    print("\nExample 6: Image capture and analysis - 'Take a photo and analyze what you see'")
+    result = agent.process_request("Take a photo and analyze what you see")
+    print(f"Result: {result}")
+    
+    # Example 7: Another simple command
+    print("\nExample 7: Another simple command - 'Turn left 45 degrees'")
     result = agent.process_request("Turn left 45 degrees")
     print(f"Result: {result}")
     
     print("\nSmart agent example completed.")
     print("The agent automatically decided when to act immediately vs. when to plan!")
-    print("All agents now have access to current robot state for better decision making!")
+    print("All agents now have access to current robot state and image analysis for better decision making!")
 
 if __name__ == "__main__":
     main()

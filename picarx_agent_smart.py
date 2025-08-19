@@ -165,6 +165,71 @@ def capture_image_tool(filename: str = "capture.jpg") -> str:
         return f"Error capturing image: {str(e)}"
 
 @function_tool
+def analyze_image_tool(image_path: str, analysis_prompt: str = "Analyze this image and describe what you see") -> str:
+    """Analyze an image using GPT-4o vision capabilities."""
+    try:
+        # Check if image file exists
+        if not os.path.exists(image_path):
+            return f"Error: Image file '{image_path}' not found!"
+        
+        # Read and encode the image
+        with open(image_path, "rb") as image_file:
+            base64_image = base64.b64encode(image_file.read()).decode("utf-8")
+        
+        # Create a temporary vision agent for analysis
+        vision_agent = Agent(
+            name="Image Analyzer",
+            model="gpt-4o",
+            instructions="""You are an image analysis specialist. Analyze the given image and provide:
+            1. A detailed description of what you see
+            2. Any relevant observations for robot navigation or task completion
+            3. Potential obstacles, paths, or objects of interest
+            4. Recommendations for robot actions based on the image
+            
+            Be concise but thorough in your analysis."""
+        )
+        
+        # Create message with image
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": analysis_prompt
+                    },
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:image/jpeg;base64,{base64_image}"
+                    }
+                ]
+            }
+        ]
+        
+        # Get analysis
+        result = Runner.run_sync(vision_agent, messages)
+        return f"Image Analysis:\n{result.final_output}"
+        
+    except Exception as e:
+        return f"Error analyzing image: {str(e)}"
+
+@function_tool
+def capture_andAnalyze_tool(filename: str = "capture.jpg", analysis_prompt: str = "Analyze this image and describe what you see") -> str:
+    """Capture an image and immediately analyze it using GPT-4o vision."""
+    try:
+        # First capture the image
+        capture_result = capture_image_tool(filename)
+        if "Error" in capture_result:
+            return capture_result
+        
+        # Then analyze it
+        analysis_result = analyze_image_tool(filename, analysis_prompt)
+        return f"Image captured and analyzed:\n\n{analysis_result}"
+        
+    except Exception as e:
+        return f"Error in capture and analyze: {str(e)}"
+
+@function_tool
 def play_sound_tool(filename: str, volume: int = 50) -> str:
     """Play sound through speaker. volume: 0-100."""
     try:
@@ -307,19 +372,31 @@ Before making your decision, always check the current robot state using get_robo
 - Distance from obstacles (ultrasound sensor)
 - Surface conditions (grayscale sensors)
 
-This context helps you make better decisions. For example:
+You can also capture and analyze images using:
+- capture_image_tool() - Take a photo for context
+- analyze_image_tool() - Analyze existing images
+- captureAndAnalyze_tool() - Take photo and analyze in one step
+
+This visual context helps you make better decisions. For example:
 - If steering servo is already at -20° and user says "turn left more", you know the current position
 - If obstacle is very close (<10cm), complex navigation might need a plan
 - If camera is already tilted down, you know the current viewing angle
+- If user wants to "find the red object", you can capture and analyze an image to see what's visible
 
 Examples:
 - "Drive forward" → IMMEDIATE: Drive forward
 - "Turn left 20 degrees" → IMMEDIATE: Turn left 20 degrees  
+- "Take a picture and tell me what you see" → IMMEDIATE: Capture and analyze image
 - "Explore the room and find the exit" → NEEDS PLAN: Explore room to find exit
 - "Navigate around obstacles to reach the target" → NEEDS PLAN: Navigate around obstacles to target
 
 Always respond with either IMMEDIATE: or NEEDS PLAN: prefix.""",
-            tools=[get_robot_state_tool]  # Access to robot state for better decision making
+                         tools=[
+                 get_robot_state_tool,  # Access to robot state for better decision making
+                 capture_image_tool,     # Can capture images for context
+                 analyze_image_tool,     # Can analyze existing images
+                 captureAndAnalyze_tool  # Can capture and analyze in one step
+             ]
         )
     
     def _create_judge(self) -> Agent:
@@ -338,26 +415,36 @@ Before providing guidance, always check the current robot state using get_robot_
 - Distance from obstacles (ultrasound sensor)
 - Surface conditions (grayscale sensors)
 
-This context helps you provide better guidance. For example:
+You can also capture and analyze images using:
+- capture_image_tool() - Take a photo for context
+- analyze_image_tool() - Analyze existing images
+- captureAndAnalyze_tool() - Take photo and analyze in one step
+
+This visual context helps you provide better guidance. For example:
 - If steering servo is at -15° and next step is "turn left", you know it needs to go to -30° or beyond
 - If obstacle is very close (<5cm), you might suggest stopping or backing up
 - If camera is already tilted down, you know the current viewing angle for analysis
+- If next step involves finding an object, you can capture and analyze an image to see what's visible
+- If navigation seems stuck, you can take a photo to assess the current situation
 
 You have access to:
 - Current task description
 - Plan steps and progress
 - History of completed actions
 - Current robot state (sensor readings, images)
+- Image capture and analysis tools
 
 Always provide clear, actionable guidance on what should happen next based on the current robot state.""",
-            tools=[
-                check_plan_status_tool,
-                update_plan_progress_tool,
-                get_robot_state_tool,
-                get_ultrasound_tool,
-                get_grayscale_tool,
-                capture_image_tool
-            ]
+                         tools=[
+                 check_plan_status_tool,
+                 update_plan_progress_tool,
+                 get_robot_state_tool,
+                 get_ultrasound_tool,
+                 get_grayscale_tool,
+                 capture_image_tool,
+                 analyze_image_tool,
+                 captureAndAnalyze_tool
+             ]
         )
     
     def _create_action_agent(self) -> Agent:
@@ -371,29 +458,38 @@ Before executing any command, always check the current robot state using get_rob
 - Distance from obstacles (ultrasound sensor)
 - Surface conditions (grayscale sensors)
 
-This context helps you execute commands more intelligently. For example:
+You can also capture and analyze images using:
+- capture_image_tool() - Take a photo for context
+- analyze_image_tool() - Analyze existing images
+- captureAndAnalyze_tool() - Take photo and analyze in one step
+
+This visual context helps you execute commands more intelligently. For example:
 - If steering servo is already at -25° and command is "turn left 20 degrees", you know to go to -45°
 - If obstacle is very close (<10cm), use lower speeds or stop first
 - If camera is already at desired angle, you can skip that servo command
+- If command involves finding or identifying objects, you can capture and analyze images
+- If navigation seems unclear, you can take a photo to assess the situation
 
 Be careful with movement commands and always consider safety. Use appropriate speeds and durations based on the current robot state.""",
-            tools=[
-                reset_tool,
-                set_dir_servo_tool,
-                set_cam_pan_servo_tool,
-                set_cam_tilt_servo_tool,
-                set_motor_speed_tool,
-                drive_forward_tool,
-                drive_backward_tool,
-                stop_tool,
-                turn_left_tool,
-                turn_right_tool,
-                get_robot_state_tool,
-                get_ultrasound_tool,
-                get_grayscale_tool,
-                capture_image_tool,
-                play_sound_tool
-            ]
+                         tools=[
+                 reset_tool,
+                 set_dir_servo_tool,
+                 set_cam_pan_servo_tool,
+                 set_cam_tilt_servo_tool,
+                 set_motor_speed_tool,
+                 drive_forward_tool,
+                 drive_backward_tool,
+                 stop_tool,
+                 turn_left_tool,
+                 turn_right_tool,
+                 get_robot_state_tool,
+                 get_ultrasound_tool,
+                 get_grayscale_tool,
+                 capture_image_tool,
+                 analyze_image_tool,
+                 captureAndAnalyze_tool,
+                 play_sound_tool
+             ]
         )
     
     def process_request(self, user_input: str) -> str:
@@ -524,6 +620,9 @@ def main():
     print("  'quit' - Exit")
     print("  'reset' - Reset the robot")
     print("  'state' - Check current robot state (servos, sensors)")
+    print("  'capture' - Take a photo")
+    print("  'analyze [filename]' - Analyze an image file")
+    print("  'see' - Take photo and analyze what you see")
     print("  'status' - Check plan status")
     print("  'progress' - Check plan progress")
     print("  'execute: [step]' - Execute a specific plan step")
@@ -548,6 +647,19 @@ def main():
             elif user_input.lower() == 'progress':
                 result = agent.check_plan_progress()
                 print(f"📋 Progress Report:\n{result}")
+                continue
+            elif user_input.lower() == 'capture':
+                result = agent.process_request("Take a photo using the camera")
+                print(f"📸 Photo Capture:\n{result}")
+                continue
+            elif user_input.lower() == 'see':
+                result = agent.process_request("Take a photo and analyze what you see in the image")
+                print(f"👁️  Photo Analysis:\n{result}")
+                continue
+            elif user_input.lower().startswith('analyze '):
+                filename = user_input[8:].strip()
+                result = agent.process_request(f"Analyze the image file {filename}")
+                print(f"🔍 Image Analysis:\n{result}")
                 continue
             elif user_input.lower().startswith('execute:'):
                 step = user_input[8:].strip()
