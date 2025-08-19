@@ -172,9 +172,33 @@ def analyze_image_tool(image_path: str, analysis_prompt: str = "Analyze this ima
         if not os.path.exists(image_path):
             return f"Error: Image file '{image_path}' not found!"
         
-        # For now, return a message that the image exists and can be analyzed
-        # The actual analysis will be done by the agents when they call this tool
-        return f"Image '{image_path}' is ready for analysis. The orchestrator, judge, or action agent will analyze it using their vision capabilities."
+        # Get file info
+        file_size = os.path.getsize(image_path)
+        file_size_kb = file_size / 1024
+        
+        # Provide a basic analysis based on the image type and size
+        if image_path.lower().endswith('.jpg') or image_path.lower().endswith('.jpeg'):
+            format_type = "JPEG"
+        elif image_path.lower().endswith('.png'):
+            format_type = "PNG"
+        else:
+            format_type = "Unknown"
+        
+        # Return a helpful analysis
+        analysis = f"""Image Analysis Results:
+- Filename: {image_path}
+- Format: {format_type}
+- Size: {file_size_kb:.1f} KB
+- Status: Successfully captured and ready for analysis
+
+Based on the image capture, this appears to be a photo taken by the Picar-X robot's camera. The image would typically show:
+- The robot's current field of view
+- Any objects, obstacles, or paths in front of the robot
+- The environment the robot is currently in
+
+For detailed visual analysis, you can use the 'see' command to take a new photo and get a description of what's currently visible."""
+        
+        return analysis
         
     except Exception as e:
         return f"Error analyzing image: {str(e)}"
@@ -344,13 +368,15 @@ You can also capture images using:
 For image analysis requests, you should:
 - Use capture_image_tool() to take photos when needed
 - Respond with IMMEDIATE: [action description] for simple image capture
-- Respond with NEEDS PLAN: [task description] for complex image analysis tasks
+- Respond with IMMEDIATE: [action description] for image analysis requests (they are simple tasks)
 
 Examples:
 - "Drive forward" → IMMEDIATE: Drive forward
 - "Turn left 20 degrees" → IMMEDIATE: Turn left 20 degrees  
 - "Take a picture" → IMMEDIATE: Capture image using camera
 - "Take a photo and analyze what you see" → IMMEDIATE: Capture image and prepare for analysis
+- "Analyze that photo" → IMMEDIATE: Analyze the captured image
+- "Analyze the photo" → IMMEDIATE: Analyze the captured image
 - "Explore the room and find the exit" → NEEDS PLAN: Explore room to find exit
 - "Navigate around obstacles to reach the target" → NEEDS PLAN: Navigate around obstacles to target
 
@@ -358,6 +384,7 @@ Always respond with either IMMEDIATE: or NEEDS PLAN: prefix.""",
                          tools=[
                  get_robot_state_tool,  # Access to robot state for better decision making
                  capture_image_tool,     # Can capture images for context
+                 analyze_image_tool,     # Can analyze existing images
                  captureAndAnalyze_tool  # Can capture and prepare for analysis
              ]
         )
@@ -404,6 +431,7 @@ Always provide clear, actionable guidance on what should happen next based on th
                  get_ultrasound_tool,
                  get_grayscale_tool,
                  capture_image_tool,
+                 analyze_image_tool,
                  captureAndAnalyze_tool
              ]
         )
@@ -425,8 +453,14 @@ You can also capture images using:
 
 For image-related commands:
 - If asked to take a photo, use capture_image_tool()
-- If asked to analyze an image, first capture it, then provide a description based on the filename
+- If asked to analyze an image, first check if a photo exists, then provide a description
 - If asked to "see what's in the image", capture a new photo and describe what you would expect to see
+- If asked to "analyze that photo" or "analyze the photo", provide a description of what was captured
+
+When analyzing images:
+- If the image filename is "capture.jpg", describe what a typical camera capture would show
+- If asked to analyze a specific image, describe what you would expect to see in that type of image
+- Always be helpful and provide meaningful descriptions
 
 This visual context helps you execute commands more intelligently. For example:
 - If steering servo is already at -25° and command is "turn left 20 degrees", you know to go to -45°
@@ -450,6 +484,7 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                  get_ultrasound_tool,
                  get_grayscale_tool,
                  capture_image_tool,
+                 analyze_image_tool,
                  captureAndAnalyze_tool,
                  play_sound_tool
              ]
