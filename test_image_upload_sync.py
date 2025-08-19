@@ -53,9 +53,7 @@ def test_image_upload(image_path: str):
                     },
                     {
                         "type": "input_image",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}"
-                        }
+                        "image_url": f"data:image/jpeg;base64,{base64_image}"
                     }
                 ]
             }
