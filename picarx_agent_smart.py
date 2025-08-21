@@ -674,10 +674,12 @@ Be careful with movement commands and always consider safety. Use appropriate sp
             print(f"🚀 Step 4: Sending to GPT-4o vision model via action agent...")
             print(f"⏳ Waiting for GPT-4o vision analysis...")
             
+            # Note: We must set session=None when sending a list of messages
+            # The session memory will still work for subsequent string inputs
             result = Runner.run_sync(
                 self.action_agent,
                 messages,
-                session=self.session
+                session=None  # Must be None when sending message list
             )
             
             print(f"🎯 GPT-4o Vision Analysis Complete!")
