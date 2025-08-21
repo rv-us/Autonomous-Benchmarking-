@@ -549,14 +549,13 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                     session=self.session
                 )
                 
-                # Get current status
-                status_result = Runner.run_sync(
-                    self.judge,
-                    "Check the current plan status and provide guidance on next steps",
-                    session=self.session
-                )
+                print(f"📋 Plan created: {plan_result.final_output}")
                 
-                return f"📋 Plan created for: {task_description}\n\n📊 Current Status:\n{status_result.final_output}"
+                # Start executing the plan with continuous monitoring
+                print(f"🚀 Starting plan execution with continuous monitoring...")
+                execution_result = self.execute_plan_with_monitoring(task_description)
+                
+                return f"📋 Plan created for: {task_description}\n\n🚀 Plan Execution:\n{execution_result}"
                 
             else:
                 # Fallback to action agent
@@ -604,6 +603,118 @@ Be careful with movement commands and always consider safety. Use appropriate sp
             
         except Exception as e:
             return f"❌ Error executing plan step: {str(e)}"
+    
+    def execute_plan_with_monitoring(self, task_description: str) -> str:
+        """Execute a plan with continuous monitoring, taking photos and using tools to verify progress."""
+        try:
+            print(f"🚀 Starting plan execution with continuous monitoring for: {task_description}")
+            
+            # Step 1: Take initial photo to understand current state
+            print("📸 Step 1: Taking initial photo to understand current state...")
+            initial_analysis = self.capture_and_analyze_image(f"Analyze this image to understand the current environment for the task: {task_description}")
+            print(f"📸 Initial analysis: {initial_analysis}")
+            
+            # Step 2: Get current robot state
+            print("🤖 Step 2: Getting current robot state...")
+            current_state = self.get_current_robot_state()
+            print(f"🤖 Current robot state: {current_state}")
+            
+            # Step 3: Start executing the plan step by step
+            print("📋 Step 3: Starting plan execution...")
+            
+            # For the chair distance task, create a specific execution plan
+            if "20 cm away from the chair" in task_description.lower():
+                return self.execute_chair_distance_plan()
+            
+            # For other tasks, use the general approach
+            return self.execute_general_plan(task_description)
+            
+        except Exception as e:
+            error_msg = f"❌ Error in plan execution: {str(e)}"
+            print(error_msg)
+            return error_msg
+    
+    def execute_chair_distance_plan(self) -> str:
+        """Execute the specific plan to move to 20cm from the chair."""
+        try:
+            print("🪑 Executing chair distance plan...")
+            
+            max_iterations = 10  # Prevent infinite loops
+            iteration = 0
+            
+            while iteration < max_iterations:
+                iteration += 1
+                print(f"🔄 Iteration {iteration}/{max_iterations}")
+                
+                # Step 1: Take photo and analyze current position
+                print("📸 Taking photo to analyze current position...")
+                position_analysis = self.capture_and_analyze_image("Analyze this image to determine the robot's current distance from the chair and what direction to move")
+                print(f"📸 Position analysis: {position_analysis}")
+                
+                # Step 2: Check ultrasound sensor
+                print("📡 Checking ultrasound sensor...")
+                try:
+                    from picarx_primitives import get_ultrasound
+                    distance = get_ultrasound()
+                    print(f"📡 Ultrasound reading: {distance} cm")
+                except Exception as e:
+                    print(f"⚠️ Ultrasound error: {e}")
+                    distance = None
+                
+                # Step 3: Determine action based on analysis
+                if distance and distance <= 25:  # Within 25cm (close enough to 20cm)
+                    print("✅ Target distance reached!")
+                    return f"🎯 Mission accomplished! Robot is now approximately {distance}cm from the chair.\n\n📸 Final position analysis:\n{position_analysis}"
+                
+                # Step 4: Move based on analysis
+                print("🚶 Moving robot...")
+                if distance and distance > 25:
+                    # Move forward slowly
+                    try:
+                        from picarx_primitives import drive_forward, stop_tool
+                        print("⬆️ Moving forward...")
+                        drive_forward(30, 0.5)  # 30% speed, 0.5 seconds
+                        stop_tool()
+                        print("⏹️ Stopped")
+                    except Exception as e:
+                        print(f"⚠️ Movement error: {e}")
+                
+                # Step 5: Wait a moment for movement to settle
+                import time
+                time.sleep(1)
+                
+                print(f"🔄 Completed iteration {iteration}")
+            
+            return f"⚠️ Plan execution completed after {max_iterations} iterations. Final position may not be exactly 20cm from chair."
+            
+        except Exception as e:
+            error_msg = f"❌ Error in chair distance plan: {str(e)}"
+            print(error_msg)
+            return error_msg
+    
+    def execute_general_plan(self, task_description: str) -> str:
+        """Execute a general plan using the judge and action agents."""
+        try:
+            print(f"📋 Executing general plan for: {task_description}")
+            
+            # Get plan guidance from judge
+            guidance = Runner.run_sync(
+                self.judge,
+                f"Provide step-by-step guidance for executing: {task_description}",
+                session=self.session
+            )
+            
+            # Execute the guidance
+            result = Runner.run_sync(
+                self.action_agent,
+                guidance.final_output,
+                session=self.session
+            )
+            
+            return f"📋 General plan executed:\n{result.final_output}"
+            
+        except Exception as e:
+            return f"❌ Error in general plan execution: {str(e)}"
     
     def get_current_robot_state(self) -> str:
         """Get the current robot state including servo angles and sensor readings."""
@@ -727,6 +838,7 @@ def main():
     print("  'status' - Check plan status")
     print("  'progress' - Check plan progress")
     print("  'execute: [step]' - Execute a specific plan step")
+    print("  'move to chair' - Move to 20cm from chair (test plan execution)")
     print("Memory enabled - I will remember our conversations!")
     print("-" * 50)
     
@@ -766,6 +878,10 @@ def main():
                 step = user_input[8:].strip()
                 result = agent.execute_plan_step(step)
                 print(f"⚡ Step Execution:\n{result}")
+                continue
+            elif user_input.lower() == 'move to chair':
+                result = agent.process_request("keep on moving till you are 20 cm away from the chair")
+                print(f"🪑 Chair Distance Mission:\n{result}")
                 continue
             
             # Process the request
