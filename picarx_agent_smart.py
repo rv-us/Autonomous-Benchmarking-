@@ -358,8 +358,11 @@ For image analysis requests, you should:
 - For "analyze" commands, respond with IMMEDIATE: Capture image and analyze with context
 - For requests that mention "analyze" or "then analyze", respond with IMMEDIATE: Capture image and analyze with context
 - For requests that mention "photo" and "analyze" together, respond with IMMEDIATE: Capture image and analyze with context
+- For requests that mention "what does the robot see", respond with IMMEDIATE: Capture image and analyze with context
+- For requests that mention "robot see" or "robot view", respond with IMMEDIATE: Capture image and analyze with context
 - Always provide clear action descriptions that the action agent can execute
 - Note: The capture_image_tool is a simple tool that only captures images - analysis is handled separately
+- CRITICAL: You must respond with EXACTLY "IMMEDIATE: Capture image and analyze with context" for any image analysis request
 
 Examples:
 - "Drive forward" → IMMEDIATE: Drive forward
@@ -372,6 +375,10 @@ Examples:
 - "Analyze the photo" → IMMEDIATE: Capture image and analyze with context
 - "Look for obstacles" → IMMEDIATE: Capture image and analyze with context
 - "Find the red object" → IMMEDIATE: Capture image and analyze with context
+- "What does the robot see" → IMMEDIATE: Capture image and analyze with context
+- "What can the robot see" → IMMEDIATE: Capture image and analyze with context
+- "Robot view" → IMMEDIATE: Capture image and analyze with context
+- "Robot see" → IMMEDIATE: Capture image and analyze with context
 - "Explore the room and find the exit" → NEEDS PLAN: Explore room to find exit
 - "Navigate around obstacles to reach the target" → NEEDS PLAN: Navigate around obstacles to target
 
@@ -504,6 +511,8 @@ Be careful with movement commands and always consider safety. Use appropriate sp
             
             decision = orchestrator_result.final_output.strip()
             print(f"🎯 Orchestrator decision: {decision}")
+            print(f"🔍 Decision starts with IMMEDIATE: {decision.startswith('IMMEDIATE:')}")
+            print(f"🔍 Decision starts with NEEDS PLAN: {decision.startswith('NEEDS PLAN:')}")
             
             # Step 2: Execute based on decision
             if decision.startswith("IMMEDIATE:"):
@@ -609,22 +618,37 @@ Be careful with movement commands and always consider safety. Use appropriate sp
     def capture_and_analyze_image(self, context: str = "Analyze this image and describe what you see") -> str:
         """Capture an image and immediately send it to the action agent for analysis with context."""
         try:
+            print("🔍 Starting image capture and analysis process...")
+            print(f"📝 Context provided: {context}")
+            
             # Step 1: Capture the image using the capture_image function directly
             filename = f"capture_{int(time.time())}.jpg"
+            print(f"📸 Step 1: Capturing image as '{filename}'...")
             try:
                 capture_image(filename)
-                print(f"📸 Image captured as '{filename}'")
+                print(f"✅ Image captured successfully as '{filename}'")
             except Exception as e:
-                return f"❌ Error capturing image: {str(e)}"
+                error_msg = f"❌ Error capturing image: {str(e)}"
+                print(error_msg)
+                return error_msg
             
             # Step 2: Read and encode the image
+            print(f"📁 Step 2: Reading and encoding image file...")
             if not os.path.exists(filename):
-                return f"❌ Error: Image file '{filename}' not found after capture!"
+                error_msg = f"❌ Error: Image file '{filename}' not found after capture!"
+                print(error_msg)
+                return error_msg
             
+            print(f"📖 Reading image file: {filename}")
             with open(filename, "rb") as image_file:
-                base64_image = base64.b64encode(image_file.read()).decode("utf-8")
+                image_data = image_file.read()
+                file_size = len(image_data)
+                print(f"📊 Image file size: {file_size} bytes ({file_size/1024:.1f} KB)")
+                base64_image = base64.b64encode(image_data).decode("utf-8")
+                print(f"🔢 Base64 encoding completed. Length: {len(base64_image)} characters")
             
             # Step 3: Create message with image and context for the action agent
+            print(f"📝 Step 3: Creating message for GPT-4o vision analysis...")
             messages = [
                 {
                     "role": "user",
@@ -640,19 +664,38 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                     ]
                 }
             ]
+            print(f"📤 Message created with:")
+            print(f"   - Text content: {messages[0]['content'][0]['text']}")
+            print(f"   - Image content: data:image/jpeg;base64,[{len(base64_image)} chars]")
             
             # Step 4: Send to action agent for analysis
-            print(f"📸 Sending image to action agent for analysis...")
+            print(f"🚀 Step 4: Sending to GPT-4o vision model via action agent...")
+            print(f"⏳ Waiting for GPT-4o vision analysis...")
+            
             result = Runner.run_sync(
                 self.action_agent,
                 messages,
                 session=self.session
             )
             
+            print(f"🎯 GPT-4o Vision Analysis Complete!")
+            print(f"📋 Raw result object type: {type(result)}")
+            print(f"📋 Raw result attributes: {dir(result)}")
+            print(f"📋 Final output type: {type(result.final_output)}")
+            print(f"📋 Final output length: {len(str(result.final_output))} characters")
+            print(f"📋 Final output content:")
+            print("=" * 80)
+            print(result.final_output)
+            print("=" * 80)
+            
             return f"✅ Image Analysis Complete:\n\n{result.final_output}"
             
         except Exception as e:
-            return f"❌ Error in capture and analyze: {str(e)}"
+            error_msg = f"❌ Error in capture and analyze: {str(e)}"
+            print(error_msg)
+            print(f"🔍 Exception type: {type(e)}")
+            print(f"🔍 Exception details: {str(e)}")
+            return error_msg
 
 # ============================================================================
 # MAIN FUNCTION
