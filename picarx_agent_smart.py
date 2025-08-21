@@ -349,7 +349,7 @@ Before making your decision, always check the current robot state using get_robo
 - Surface conditions (grayscale sensors)
 
 You can capture images using:
-- capture_image_tool(filename) - Take a photo
+- capture_image_tool(filename) - Take a photo (simple capture tool)
 
 For image analysis requests, you should:
 - Use capture_image_tool() to capture images when needed
@@ -359,6 +359,7 @@ For image analysis requests, you should:
 - For requests that mention "analyze" or "then analyze", respond with IMMEDIATE: Capture image and analyze with context
 - For requests that mention "photo" and "analyze" together, respond with IMMEDIATE: Capture image and analyze with context
 - Always provide clear action descriptions that the action agent can execute
+- Note: The capture_image_tool is a simple tool that only captures images - analysis is handled separately
 
 Examples:
 - "Drive forward" → IMMEDIATE: Drive forward
@@ -377,7 +378,7 @@ Examples:
 Always respond with either IMMEDIATE: or NEEDS PLAN: prefix.""",
                                                    tools=[
                   get_robot_state_tool,  # Access to robot state for better decision making
-                  capture_image_tool,     # Can capture images
+                  capture_image_tool,     # Simple image capture tool
                   analyze_image_tool      # Can analyze existing images
               ]
         )
@@ -399,7 +400,7 @@ Before providing guidance, always check the current robot state using get_robot_
 - Surface conditions (grayscale sensors)
 
 You can capture images using:
-- capture_image_tool(filename) - Take a photo
+- capture_image_tool(filename) - Take a photo (simple capture tool)
 
 This visual context helps you provide better guidance. For example:
 - If steering servo is at -15° and next step is "turn left", you know it needs to go to -30° or beyond
@@ -407,6 +408,7 @@ This visual context helps you provide better guidance. For example:
 - If camera is already tilted down, you know the current viewing angle for analysis
 - If next step involves finding an object, you can capture an image to document the current view
 - If navigation seems stuck, you can take a photo to assess the current situation
+- Note: The capture_image_tool is a simple tool that only captures images - use it when you need visual documentation
 
 You have access to:
 - Current task description
@@ -422,7 +424,7 @@ Always provide clear, actionable guidance on what should happen next based on th
                   get_robot_state_tool,
                   get_ultrasound_tool,
                   get_grayscale_tool,
-                  capture_image_tool,
+                  capture_image_tool,  # Simple image capture tool
                   analyze_image_tool
               ]
         )
@@ -439,10 +441,10 @@ Before executing any command, always check the current robot state using get_rob
 - Surface conditions (grayscale sensors)
 
 You can capture images using:
-- capture_image_tool(filename) - Take a photo
+- capture_image_tool(filename) - Take a photo (simple capture tool)
 
 For image-related commands:
-- If asked to take a photo, use capture_image_tool(filename)
+- If asked to take a photo, use capture_image_tool(filename) to capture the image
 - If asked to analyze an image, first capture it with capture_image_tool(filename), then provide a description
 - If asked to "see what's in the image", use capture_image_tool(filename) and describe what you would expect to see
 - If asked to "analyze that photo" or "analyze the photo", provide a description of what was captured
@@ -452,6 +454,7 @@ When analyzing images:
 - Always be helpful and provide meaningful descriptions
 - Consider the context of the request when providing analysis
 - Suggest potential robot actions based on what you observe
+- Note: When you receive "Capture image and analyze with context" requests, the system will automatically handle the image capture and analysis for you
 
 IMPORTANT: You can now receive image messages directly from the user. When you receive an image:
 - Analyze the image content thoroughly
@@ -465,6 +468,7 @@ This visual context helps you execute commands more intelligently. For example:
 - If obstacle is very close (<10cm), use lower speeds or stop first
 - If camera is already at desired angle, you can skip that servo command
 - If command involves finding or identifying objects, you can capture images to document the environment
+- Note: The capture_image_tool is a simple tool that only captures images - use it when you need visual documentation
 
 Be careful with movement commands and always consider safety. Use appropriate speeds and durations based on the current robot state.""",
                                                    tools=[
@@ -481,7 +485,7 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                   get_robot_state_tool,
                   get_ultrasound_tool,
                   get_grayscale_tool,
-                  capture_image_tool,
+                  capture_image_tool,  # Simple image capture tool
                   analyze_image_tool,
                   play_sound_tool
               ]
@@ -605,11 +609,13 @@ Be careful with movement commands and always consider safety. Use appropriate sp
     def capture_and_analyze_image(self, context: str = "Analyze this image and describe what you see") -> str:
         """Capture an image and immediately send it to the action agent for analysis with context."""
         try:
-            # Step 1: Capture the image
+            # Step 1: Capture the image using the capture_image function directly
             filename = f"capture_{int(time.time())}.jpg"
-            capture_result = capture_image_tool(filename)
-            if "Error" in capture_result:
-                return f"❌ Error capturing image: {capture_result}"
+            try:
+                capture_image(filename)
+                print(f"📸 Image captured as '{filename}'")
+            except Exception as e:
+                return f"❌ Error capturing image: {str(e)}"
             
             # Step 2: Read and encode the image
             if not os.path.exists(filename):
@@ -636,7 +642,7 @@ Be careful with movement commands and always consider safety. Use appropriate sp
             ]
             
             # Step 4: Send to action agent for analysis
-            print(f"📸 Image captured as '{filename}', sending to action agent for analysis...")
+            print(f"📸 Sending image to action agent for analysis...")
             result = Runner.run_sync(
                 self.action_agent,
                 messages,
