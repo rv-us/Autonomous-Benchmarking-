@@ -203,76 +203,7 @@ For detailed visual analysis, you can use the 'see' command to take a new photo 
     except Exception as e:
         return f"Error analyzing image: {str(e)}"
 
-@function_tool
-def capture_and_analyze_with_gpt4o_tool(context: str = "Analyze this image and describe what you see") -> str:
-    """Capture an image and immediately analyze it using GPT-4o vision capabilities."""
-    try:
-        print("🔍 Starting GPT-4o vision analysis...")
-        print(f"📝 Context provided: {context}")
-        
-        # Step 1: Capture the image
-        filename = f"capture_{int(time.time())}.jpg"
-        print(f"📸 Capturing image as '{filename}'...")
-        capture_image(filename)
-        print(f"✅ Image captured successfully as '{filename}'")
-        
-        # Step 2: Read and encode the image
-        if not os.path.exists(filename):
-            return f"❌ Error: Image file '{filename}' not found after capture!"
-        
-        with open(filename, "rb") as image_file:
-            image_data = image_file.read()
-            file_size = len(image_data)
-            print(f"📊 Image file size: {file_size} bytes ({file_size/1024:.1f} KB)")
-            base64_image = base64.b64encode(image_data).decode("utf-8")
-            print(f"🔢 Base64 encoding completed. Length: {len(base64_image)} characters")
-        
-        # Step 3: Create message for GPT-4o vision
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_text",
-                        "text": f"Context: {context}\n\nPlease analyze this image and provide a detailed description of what you see, including any relevant observations for robot navigation or task completion."
-                    },
-                    {
-                        "type": "input_image",
-                        "image_url": f"data:image/jpeg;base64,{base64_image}"
-                    }
-                ]
-            }
-        ]
-        
-        print(f"🚀 Sending to GPT-4o vision model...")
-        print(f"⏳ Waiting for analysis...")
-        
-        # Step 4: Send to GPT-4o via OpenAI client
-        from openai import OpenAI
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            max_tokens=1000
-        )
-        
-        gpt4o_analysis = response.choices[0].message.content
-        print(f"🎯 GPT-4o Vision Analysis Complete!")
-        print(f"📋 Analysis length: {len(gpt4o_analysis)} characters")
-        print(f"📋 Analysis content:")
-        print("=" * 80)
-        print(gpt4o_analysis)
-        print("=" * 80)
-        
-        return f"✅ GPT-4o Vision Analysis Complete:\n\n{gpt4o_analysis}"
-        
-    except Exception as e:
-        error_msg = f"❌ Error in GPT-4o vision analysis: {str(e)}"
-        print(error_msg)
-        print(f"🔍 Exception type: {type(e)}")
-        print(f"🔍 Exception details: {str(e)}")
-        return error_msg
+
 
 
 
@@ -426,29 +357,29 @@ For image analysis requests, you should:
 - Use capture_image_tool() to capture images when needed
 - Respond with IMMEDIATE: [action description] for simple image capture
 - Respond with IMMEDIATE: [action description] for image analysis requests (they are simple tasks)
-- For "analyze" commands, respond with IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- For requests that mention "analyze" or "then analyze", respond with IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- For requests that mention "photo" and "analyze" together, respond with IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- For requests that mention "what does the robot see", respond with IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- For requests that mention "robot see" or "robot view", respond with IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
+- For "analyze" commands, respond with IMMEDIATE: Analyze image with GPT-4o vision
+- For requests that mention "analyze" or "then analyze", respond with IMMEDIATE: Analyze image with GPT-4o vision
+- For requests that mention "photo" and "analyze" together, respond with IMMEDIATE: Analyze image with GPT-4o vision
+- For requests that mention "what does the robot see", respond with IMMEDIATE: Analyze image with GPT-4o vision
+- For requests that mention "robot see" or "robot view", respond with IMMEDIATE: Analyze image with GPT-4o vision
 - Always provide clear action descriptions that the action agent can execute
-- Note: The action agent now has access to GPT-4o vision analysis via capture_and_analyze_with_gpt4o_tool
+- Note: Image analysis will be handled by the smart agent's capture_and_analyze_image method
 
 Examples:
 - "Drive forward" → IMMEDIATE: Drive forward
 - "Turn left 20 degrees" → IMMEDIATE: Turn left 20 degrees  
 - "Take a picture" → IMMEDIATE: Capture image using camera
-- "Take a photo and analyze what you see" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "Take a photo and then analyze it" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "Take a photo and analyze it" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "Analyze that photo" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "Analyze the photo" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "Look for obstacles" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "Find the red object" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "What does the robot see" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "What can the robot see" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "Robot view" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
-- "Robot see" → IMMEDIATE: Use capture_and_analyze_with_gpt4o_tool to analyze image
+- "Take a photo and analyze what you see" → IMMEDIATE: Analyze image with GPT-4o vision
+- "Take a photo and then analyze it" → IMMEDIATE: Analyze image with GPT-4o vision
+- "Take a photo and analyze it" → IMMEDIATE: Analyze image with GPT-4o vision
+- "Analyze that photo" → IMMEDIATE: Analyze image with GPT-4o vision
+- "Analyze the photo" → IMMEDIATE: Analyze image with GPT-4o vision
+- "Look for obstacles" → IMMEDIATE: Analyze image with GPT-4o vision
+- "Find the red object" → IMMEDIATE: Analyze image with GPT-4o vision
+- "What does the robot see" → IMMEDIATE: Analyze image with GPT-4o vision
+- "What can the robot see" → IMMEDIATE: Analyze image with GPT-4o vision
+- "Robot view" → IMMEDIATE: Analyze image with GPT-4o vision
+- "Robot see" → IMMEDIATE: Analyze image with GPT-4o vision
 - "Explore the room and find the exit" → NEEDS PLAN: Explore room to find exit
 - "Navigate around obstacles to reach the target" → NEEDS PLAN: Navigate around obstacles to target
 
@@ -522,11 +453,11 @@ You can capture images using:
 
 For image-related commands:
 - If asked to take a photo, use capture_image_tool(filename) to capture the image
-- If asked to analyze an image, use capture_and_analyze_with_gpt4o_tool(context) to capture and analyze with GPT-4o vision
-- If asked to "see what's in the image", use capture_and_analyze_with_gpt4o_tool("Describe what you see in this image")
-- If asked to "analyze that photo" or "analyze the photo", use capture_and_analyze_with_gpt4o_tool("Analyze this image and describe what you see")
-- If asked to look for specific objects, use capture_and_analyze_with_gpt4o_tool("Look for and describe any objects in this image")
-- If asked to "take a photo and analyze it", use capture_and_analyze_with_gpt4o_tool("Analyze this image and describe what you see")
+- If asked to analyze an image, the smart agent will handle this via its capture_and_analyze_image method
+- If asked to "see what's in the image", the smart agent will capture and analyze the image
+- If asked to "analyze that photo" or "analyze the photo", the smart agent will capture and analyze the image
+- If asked to look for specific objects, the smart agent will capture and analyze the image
+- If asked to "take a photo and analyze it", the smart agent will capture and analyze the image
 
 When analyzing images:
 - Always be helpful and provide meaningful descriptions
@@ -565,7 +496,6 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                   get_grayscale_tool,
                   capture_image_tool,  # Simple image capture tool
                   analyze_image_tool,
-                  capture_and_analyze_with_gpt4o_tool,  # GPT-4o vision analysis tool
                   play_sound_tool
               ]
         )
@@ -593,7 +523,7 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                 print(f"⚡ Executing immediate action: {action_description}")
                 
                 # Check if this is an image analysis request
-                if "capture image and analyze" in action_description.lower():
+                if "analyze" in action_description.lower() and ("image" in action_description.lower() or "photo" in action_description.lower()):
                     print("📸 Detected image analysis request, using capture_and_analyze_image method...")
                     result = self.capture_and_analyze_image("Analyze this image and describe what you see")
                     return f"✅ Image Analysis Completed: {result}"
