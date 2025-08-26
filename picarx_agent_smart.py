@@ -682,20 +682,18 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                     print("⚠️ Ultrasound invalid, using visual analysis for movement...")
                     # Move forward slowly based on visual analysis
                     try:
-                        from picarx_primitives import drive_forward, stop_tool
                         print("⬆️ Moving forward slowly (ultrasound invalid)...")
                         drive_forward(20, 0.3)  # 20% speed, 0.3 seconds
-                        stop_tool()
+                        stop()
                         print("⏹️ Stopped")
                     except Exception as e:
                         print(f"⚠️ Movement error: {e}")
                 elif distance > 25:
                     # Move forward slowly
                     try:
-                        from picarx_primitives import drive_forward, stop_tool
                         print("⬆️ Moving forward...")
                         drive_forward(30, 0.5)  # 30% speed, 0.5 seconds
-                        stop_tool()
+                        stop()
                         print("⏹️ Stopped")
                     except Exception as e:
                         print(f"⚠️ Movement error: {e}")
@@ -923,7 +921,7 @@ Be careful with movement commands and always consider safety. Use appropriate sp
             
             print(f"🚶 Executing: {direction} movement, {distance} distance (speed: {speed}%, duration: {duration}s)")
             
-            from picarx_primitives import drive_forward, drive_backward, set_dir_servo, stop_tool
+
             
             if direction == 'forward':
                 drive_forward(speed, duration)
@@ -938,7 +936,7 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                 drive_forward(speed, duration)
                 set_dir_servo(0)    # Straighten
             
-            stop_tool()
+            stop()
             print(f"⏹️ Movement completed: {direction} {distance}")
             
         except Exception as e:
