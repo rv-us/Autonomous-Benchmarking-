@@ -645,69 +645,100 @@ Be careful with movement commands and always consider safety. Use appropriate sp
             
             while iteration < max_iterations:
                 iteration += 1
-                print(f"🔄 Iteration {iteration}/{max_iterations}")
+                print(f"\n🔄 === ITERATION {iteration}/{max_iterations} ===")
                 
-                # Step 1: Take photo and analyze current position
-                print("📸 Taking photo to analyze current position...")
-                position_analysis = self.capture_and_analyze_image("Analyze this image to determine the robot's current distance from the chair and what direction to move")
-                print(f"📸 Position analysis: {position_analysis}")
+                # Step 1: Take photo and analyze current situation
+                print("📸 Taking photo to analyze current situation...")
+                analysis_prompt = f"""Analyze this image to help the robot complete this task: "{task_description}"
+
+Based on what you see, determine:
+1. What is the robot's current situation relative to the task goal?
+2. What should the robot do next to make progress?
+3. What direction should it move (left, right, forward, backward, or stay still)?
+4. How far should it move (small adjustment, medium movement, large movement, or no movement)?
+5. Are there any obstacles or safety concerns?
+
+Provide your analysis in this format:
+SITUATION: [describe current state]
+NEXT_ACTION: [what the robot should do]
+DIRECTION: [left/right/forward/backward/stay]
+DISTANCE: [small/medium/large/none]
+OBSTACLES: [describe any obstacles]
+REASONING: [explain your recommendation]
+PROGRESS: [how much progress toward the goal]"""
                 
-                # Step 2: Check ultrasound sensor
-                print("📡 Checking ultrasound sensor...")
-                try:
-                    from picarx_primitives import get_ultrasound
-                    distance = get_ultrasound()
-                    print(f"📡 Ultrasound reading: {distance} cm")
-                except Exception as e:
-                    print(f"⚠️ Ultrasound error: {e}")
-                    distance = None
+                situation_analysis = self.capture_and_analyze_image(analysis_prompt)
+                print(f"📸 Situation analysis received: {situation_analysis}")
                 
-                # Step 3: Determine action based on analysis
-                if distance and distance <= 25:  # Within 25cm (close enough to 20cm)
-                    print("✅ Target distance reached!")
-                    return f"🎯 Mission accomplished! Robot is now approximately {distance}cm from the chair.\n\n📸 Final position analysis:\n{position_analysis}"
+                # Step 2: Extract action instructions from analysis
+                print("🧠 Extracting action instructions from analysis...")
+                action_plan = self._extract_action_plan(situation_analysis)
+                print(f"🧠 Action plan: {action_plan}")
+                
+                # Step 3: Check if task is complete based on analysis
+                if "human" in situation_analysis.lower() and ("found" in situation_analysis.lower() or "detected" in situation_analysis.lower()):
+                    print("✅ Human detected in analysis!")
+                    final_analysis = self.capture_and_analyze_image(f"Analyze this image to confirm the task '{task_description}' has been successfully completed")
+                    return f"🎯 Task completed successfully!\n\n📸 Final confirmation:\n{final_analysis}"
                 
                 # Safety check: if we've moved several times without valid ultrasound, use visual estimation
-                if iteration >= 5 and (not distance or distance <= 0):
-                    print("⚠️ Multiple iterations without valid ultrasound - using visual estimation for safety")
-                    # Take a final photo to assess position
-                    final_analysis = self.capture_and_analyze_image("Analyze this image to determine if the robot appears to be approximately 20cm from the chair")
-                    return f"⚠️ Plan completed using visual estimation after {iteration} iterations.\n\n📸 Final visual analysis:\n{final_analysis}"
+                if iteration >= 10:
+                    print("⚠️ Multiple iterations completed - taking final assessment...")
+                    reassessment = self.capture_and_analyze_image(f"Analyze this image to determine if the robot has made progress toward the task '{task_description}' or if we need a different approach")
+                    print(f"🔄 Reassessment: {reassessment}")
                 
-                # Step 4: Move based on analysis
-                print("🚶 Moving robot...")
+                # Step 4: Execute movement based on analysis
+                print("🚶 Executing movement based on analysis...")
                 
-                # If ultrasound is invalid, use visual analysis to determine movement
-                if not distance or distance <= 0:
-                    print("⚠️ Ultrasound invalid, using visual analysis for movement...")
-                    # Move forward slowly based on visual analysis
+                # Use the analysis to determine movement
+                if "forward" in situation_analysis.lower():
+                    print("⬆️ Moving forward based on analysis...")
                     try:
-                        print("⬆️ Moving forward slowly (ultrasound invalid)...")
-                        drive_forward(20, 0.3)  # 20% speed, 0.3 seconds
+                        drive_forward(30, 0.5)
                         stop()
                         print("⏹️ Stopped")
                     except Exception as e:
                         print(f"⚠️ Movement error: {e}")
-                elif distance > 25:
-                    # Move forward slowly
+                elif "left" in situation_analysis.lower():
+                    print("⬅️ Moving left based on analysis...")
                     try:
-                        print("⬆️ Moving forward...")
-                        drive_forward(30, 0.5)  # 30% speed, 0.5 seconds
+                        set_dir_servo(-20)
+                        drive_forward(25, 0.4)
+                        set_dir_servo(0)
+                        stop()
+                        print("⏹️ Stopped")
+                    except Exception as e:
+                        print(f"⚠️ Movement error: {e}")
+                elif "right" in situation_analysis.lower():
+                    print("➡️ Moving right based on analysis...")
+                    try:
+                        set_dir_servo(20)
+                        drive_forward(25, 0.4)
+                        set_dir_servo(0)
+                        stop()
+                        print("⏹️ Stopped")
+                    except Exception as e:
+                        print(f"⚠️ Movement error: {e}")
+                else:
+                    print("🔄 Making small forward movement to explore...")
+                    try:
+                        drive_forward(20, 0.3)
                         stop()
                         print("⏹️ Stopped")
                     except Exception as e:
                         print(f"⚠️ Movement error: {e}")
                 
-                # Step 5: Wait a moment for movement to settle
+                # Step 5: Wait for movement to settle and assess
+                print("⏳ Waiting for movement to settle...")
                 import time
-                time.sleep(1)
+                time.sleep(1.5)
                 
-                print(f"🔄 Completed iteration {iteration}")
+                print(f"✅ Iteration {iteration} completed")
             
-            return f"⚠️ Plan execution completed after {max_iterations} iterations. Final position may not be exactly 20cm from chair."
+            return f"⚠️ Task execution completed after {max_iterations} iterations. Final status may not be exactly as expected."
             
         except Exception as e:
-            error_msg = f"❌ Error in chair distance plan: {str(e)}"
+            error_msg = f"❌ Error in adaptive plan execution: {str(e)}"
             print(error_msg)
             return error_msg
     
@@ -970,6 +1001,7 @@ def main():
     print("  'execute: [step]' - Execute a specific plan step")
     print("  'move to chair' - Navigate to nearest chair using visual feedback (test plan execution)")
     print("  'test circle' - Test adaptive planning with 'go in a circle' task")
+    print("  'find human' - Test human finding with 'find a human' task")
     print("Memory enabled - I will remember our conversations!")
     print("-" * 50)
     
@@ -1017,6 +1049,10 @@ def main():
             elif user_input.lower() == 'test circle':
                 result = agent.process_request("go in a circle")
                 print(f"🔄 Circle Test Mission:\n{result}")
+                continue
+            elif user_input.lower() == 'find human':
+                result = agent.process_request("find a human")
+                print(f"👤 Human Finding Mission:\n{result}")
                 continue
             
             # Process the request
