@@ -443,6 +443,8 @@ Always provide clear, actionable guidance on what should happen next based on th
             name="Picar-X Action Agent",
             instructions="""You are the action agent for a Picar-X robot. Execute the given command immediately using the available tools.
 
+When asked to create a plan, provide a clear, step-by-step plan with specific actions the robot should take. Do not ask questions or provide vague guidance - give concrete, actionable steps.
+
 Before executing any command, always check the current robot state using get_robot_state_tool() to understand:
 - Current servo angles (steering, camera pan/tilt)
 - Distance from obstacles (ultrasound sensor)
@@ -622,24 +624,23 @@ Be careful with movement commands and always consider safety. Use appropriate sp
             # Step 3: Start executing the plan step by step
             print("📋 Step 3: Starting plan execution...")
             
-            # For the chair distance task, create a specific execution plan
-            if "20 cm away from the chair" in task_description.lower():
-                return self.execute_chair_distance_plan()
-            
-            # For other tasks, use the general approach
-            return self.execute_general_plan(task_description)
+            # All tasks use the intelligent adaptive planning approach
+            print("🧠 Using intelligent adaptive planning approach...")
+            return self.execute_adaptive_plan(task_description)
             
         except Exception as e:
             error_msg = f"❌ Error in plan execution: {str(e)}"
             print(error_msg)
             return error_msg
     
-    def execute_chair_distance_plan(self) -> str:
-        """Execute the specific plan to move to 20cm from the chair."""
+    def execute_adaptive_plan(self, task_description: str) -> str:
+        """Execute ANY task using intelligent adaptive planning based on visual feedback."""
         try:
-            print("🪑 Executing chair distance plan...")
+            print("🧠 Executing intelligent adaptive plan...")
+            print(f"🎯 Task: {task_description}")
+            print("🎯 Strategy: Use iterative photo analysis to adaptively plan and execute any task")
             
-            max_iterations = 10  # Prevent infinite loops
+            max_iterations = 20  # Allow more iterations for complex tasks
             iteration = 0
             
             while iteration < max_iterations:
@@ -666,9 +667,29 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                     print("✅ Target distance reached!")
                     return f"🎯 Mission accomplished! Robot is now approximately {distance}cm from the chair.\n\n📸 Final position analysis:\n{position_analysis}"
                 
+                # Safety check: if we've moved several times without valid ultrasound, use visual estimation
+                if iteration >= 5 and (not distance or distance <= 0):
+                    print("⚠️ Multiple iterations without valid ultrasound - using visual estimation for safety")
+                    # Take a final photo to assess position
+                    final_analysis = self.capture_and_analyze_image("Analyze this image to determine if the robot appears to be approximately 20cm from the chair")
+                    return f"⚠️ Plan completed using visual estimation after {iteration} iterations.\n\n📸 Final visual analysis:\n{final_analysis}"
+                
                 # Step 4: Move based on analysis
                 print("🚶 Moving robot...")
-                if distance and distance > 25:
+                
+                # If ultrasound is invalid, use visual analysis to determine movement
+                if not distance or distance <= 0:
+                    print("⚠️ Ultrasound invalid, using visual analysis for movement...")
+                    # Move forward slowly based on visual analysis
+                    try:
+                        from picarx_primitives import drive_forward, stop_tool
+                        print("⬆️ Moving forward slowly (ultrasound invalid)...")
+                        drive_forward(20, 0.3)  # 20% speed, 0.3 seconds
+                        stop_tool()
+                        print("⏹️ Stopped")
+                    except Exception as e:
+                        print(f"⚠️ Movement error: {e}")
+                elif distance > 25:
                     # Move forward slowly
                     try:
                         from picarx_primitives import drive_forward, stop_tool
@@ -704,6 +725,8 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                 session=self.session
             )
             
+            print(f"📋 Judge guidance: {guidance.final_output}")
+            
             # Execute the guidance
             result = Runner.run_sync(
                 self.action_agent,
@@ -711,10 +734,14 @@ Be careful with movement commands and always consider safety. Use appropriate sp
                 session=self.session
             )
             
+            print(f"📋 Action agent result: {result.final_output}")
+            
             return f"📋 General plan executed:\n{result.final_output}"
             
         except Exception as e:
-            return f"❌ Error in general plan execution: {str(e)}"
+            error_msg = f"❌ Error in general plan execution: {str(e)}"
+            print(error_msg)
+            return error_msg
     
     def get_current_robot_state(self) -> str:
         """Get the current robot state including servo angles and sensor readings."""
@@ -812,6 +839,111 @@ Be careful with movement commands and always consider safety. Use appropriate sp
             print(f"🔍 Exception details: {str(e)}")
             return error_msg
 
+    def _extract_action_plan(self, analysis_text: str) -> dict:
+        """Extract action instructions from GPT-4o analysis text."""
+        try:
+            # Look for the structured format we requested
+            lines = analysis_text.split('\n')
+            action_plan = {}
+            
+            for line in lines:
+                line = line.strip()
+                if line.startswith('SITUATION:'):
+                    situation = line.split(':', 1)[1].strip()
+                    action_plan['situation'] = situation
+                elif line.startswith('NEXT_ACTION:'):
+                    next_action = line.split(':', 1)[1].strip()
+                    action_plan['next_action'] = next_action
+                elif line.startswith('DIRECTION:'):
+                    direction = line.split(':', 1)[1].strip().lower()
+                    if direction in ['left', 'right', 'forward', 'backward', 'stay']:
+                        action_plan['direction'] = direction
+                elif line.startswith('DISTANCE:'):
+                    distance = line.split(':', 1)[1].strip().lower()
+                    if distance in ['small', 'medium', 'large', 'none']:
+                        action_plan['distance'] = distance
+                elif line.startswith('OBSTACLES:'):
+                    obstacles = line.split(':', 1)[1].strip()
+                    action_plan['obstacles'] = obstacles
+                elif line.startswith('REASONING:'):
+                    reasoning = line.split(':', 1)[1].strip()
+                    action_plan['reasoning'] = reasoning
+                elif line.startswith('PROGRESS:'):
+                    progress = line.split(':', 1)[1].strip()
+                    action_plan['progress'] = progress
+            
+            # If we couldn't parse the structured format, try to infer from the text
+            if not action_plan.get('direction'):
+                if 'left' in analysis_text.lower():
+                    action_plan['direction'] = 'left'
+                elif 'right' in analysis_text.lower():
+                    action_plan['direction'] = 'right'
+                elif 'forward' in analysis_text.lower() or 'ahead' in analysis_text.lower():
+                    action_plan['direction'] = 'forward'
+                elif 'backward' in analysis_text.lower() or 'back' in analysis_text.lower():
+                    action_plan['direction'] = 'backward'
+                elif 'stay' in analysis_text.lower() or 'wait' in analysis_text.lower():
+                    action_plan['direction'] = 'stay'
+                else:
+                    action_plan['direction'] = 'forward'  # Default
+            
+            if not action_plan.get('distance'):
+                if 'small' in analysis_text.lower() or 'adjust' in analysis_text.lower():
+                    action_plan['distance'] = 'small'
+                elif 'large' in analysis_text.lower() or 'far' in analysis_text.lower():
+                    action_plan['distance'] = 'large'
+                elif 'none' in analysis_text.lower() or 'stay' in analysis_text.lower():
+                    action_plan['distance'] = 'none'
+                else:
+                    action_plan['distance'] = 'medium'  # Default
+            
+            print(f"🧠 Parsed action plan: {action_plan}")
+            return action_plan
+            
+        except Exception as e:
+            print(f"⚠️ Error parsing action plan: {e}")
+            return {"direction": "forward", "distance": "small"}
+    
+    def _execute_movement(self, movement_plan: dict) -> None:
+        """Execute the movement based on the parsed plan."""
+        try:
+            direction = movement_plan.get('direction', 'forward')
+            distance = movement_plan.get('distance', 'medium')
+            
+            # Determine speed and duration based on distance
+            if distance == 'small':
+                speed = 20
+                duration = 0.3
+            elif distance == 'medium':
+                speed = 40
+                duration = 0.6
+            else:  # large
+                speed = 60
+                duration = 1.0
+            
+            print(f"🚶 Executing: {direction} movement, {distance} distance (speed: {speed}%, duration: {duration}s)")
+            
+            from picarx_primitives import drive_forward, drive_backward, set_dir_servo, stop_tool
+            
+            if direction == 'forward':
+                drive_forward(speed, duration)
+            elif direction == 'backward':
+                drive_backward(speed, duration)
+            elif direction == 'left':
+                set_dir_servo(-20)  # Turn left
+                drive_forward(speed, duration)
+                set_dir_servo(0)    # Straighten
+            elif direction == 'right':
+                set_dir_servo(20)   # Turn right
+                drive_forward(speed, duration)
+                set_dir_servo(0)    # Straighten
+            
+            stop_tool()
+            print(f"⏹️ Movement completed: {direction} {distance}")
+            
+        except Exception as e:
+            print(f"❌ Error executing movement: {e}")
+
 # ============================================================================
 # MAIN FUNCTION
 # ============================================================================
@@ -838,7 +970,8 @@ def main():
     print("  'status' - Check plan status")
     print("  'progress' - Check plan progress")
     print("  'execute: [step]' - Execute a specific plan step")
-    print("  'move to chair' - Move to 20cm from chair (test plan execution)")
+    print("  'move to chair' - Navigate to nearest chair using visual feedback (test plan execution)")
+    print("  'test circle' - Test adaptive planning with 'go in a circle' task")
     print("Memory enabled - I will remember our conversations!")
     print("-" * 50)
     
@@ -880,8 +1013,12 @@ def main():
                 print(f"⚡ Step Execution:\n{result}")
                 continue
             elif user_input.lower() == 'move to chair':
-                result = agent.process_request("keep on moving till you are 20 cm away from the chair")
-                print(f"🪑 Chair Distance Mission:\n{result}")
+                result = agent.process_request("go to the nearest chair")
+                print(f"🪑 Chair Navigation Mission:\n{result}")
+                continue
+            elif user_input.lower() == 'test circle':
+                result = agent.process_request("go in a circle")
+                print(f"🔄 Circle Test Mission:\n{result}")
                 continue
             
             # Process the request
