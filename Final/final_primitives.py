@@ -64,22 +64,31 @@ def move_backward(speed: int, duration: float) -> None:
     _servo_angles['dir_servo'] = 0
 
 def turn_left(angle: float, speed: int, duration: float) -> None:
+    """Turn left in place using differential motor control with cali_dir_value."""
     global _servo_angles
     px = get_picarx()
-    # Set left motor (1) backward, right motor (2) forward for in-place turn
-    px.set_motor_speed(1, -speed)  # Left motor backward
-    px.set_motor_speed(2, speed)   # Right motor forward
+    
+    # Set motor directions for left turn: left motor backward, right motor forward
+    px.cali_dir_value = [-1, 1]  # [left_motor, right_motor] -1=backward, 1=forward
+    px.forward(speed)
     time.sleep(duration)
     px.stop()
+    # Reset motor directions to normal
+    px.cali_dir_value = [1, 1]
     _servo_angles['dir_servo'] = 0
 
 def turn_right(angle: float, speed: int, duration: float) -> None:
+    """Turn right in place using differential motor control with cali_dir_value."""
     global _servo_angles
     px = get_picarx()
-    px.set_motor_speed(1, speed)  # Left motor forward
-    px.set_motor_speed(2, -speed)  # Right motor backward
+    
+    # Set motor directions for right turn: left motor forward, right motor backward
+    px.cali_dir_value = [1, -1]  # [left_motor, right_motor] -1=backward, 1=forward
+    px.forward(speed)
     time.sleep(duration)
     px.stop()
+    # Reset motor directions to normal
+    px.cali_dir_value = [1, 1]
     _servo_angles['dir_servo'] = 0
 
 def get_servo_angles() -> dict:
