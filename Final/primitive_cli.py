@@ -22,8 +22,8 @@ from final_primitives import *
 
 class PrimitiveCLI:
     def __init__(self):
-        self.primitives = self._get_primitives()
         self.excluded_functions = {'get_picarx'}  # Functions to exclude from CLI
+        self.primitives = self._get_primitives()
         
     def _get_primitives(self) -> Dict[str, Dict]:
         """Extract all primitive functions and their signatures."""
