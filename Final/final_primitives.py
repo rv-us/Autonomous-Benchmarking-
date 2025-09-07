@@ -47,38 +47,38 @@ def set_motor_speed(motor_id: int, speed: int) -> None:
     px = get_picarx()
     px.set_motor_speed(motor_id, speed)
 
-def move_forward(speed: int, time: float) -> None:
+def move_forward(speed: int, duration: float) -> None:
     global _servo_angles
     px = get_picarx()
     px.forward(speed)
-    time.sleep(time)
+    time.sleep(duration)
     px.stop()
     _servo_angles['dir_servo'] = 0
 
-def move_backward(speed: int, time: float) -> None:
+def move_backward(speed: int, duration: float) -> None:
     global _servo_angles
     px = get_picarx()
     px.backward(speed)
-    time.sleep(time)
+    time.sleep(duration)
     px.stop()
     _servo_angles['dir_servo'] = 0
 
-def turn_left(angle: float, speed: int, time: float) -> None:
+def turn_left(angle: float, speed: int, duration: float) -> None:
     global _servo_angles
     px = get_picarx()
     # Set left motor (1) backward, right motor (2) forward for in-place turn
     px.set_motor_speed(1, -speed)  # Left motor backward
     px.set_motor_speed(2, speed)   # Right motor forward
-    time.sleep(time)
+    time.sleep(duration)
     px.stop()
     _servo_angles['dir_servo'] = 0
 
-def turn_right(angle: float, speed: int, time: float) -> None:
+def turn_right(angle: float, speed: int, duration: float) -> None:
     global _servo_angles
     px = get_picarx()
     px.set_motor_speed(1, speed)  # Left motor forward
     px.set_motor_speed(2, -speed)  # Right motor backward
-    time.sleep(time)
+    time.sleep(duration)
     px.stop()
     _servo_angles['dir_servo'] = 0
 
