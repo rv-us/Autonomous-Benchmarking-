@@ -131,9 +131,38 @@ STEP 5 - COMMAND GENERATION:
 3. Include descriptive text for each movement
 4. Verify the sequence will reach the exit safely
 
-REASONING FORMAT:
-Before generating commands, provide your reasoning in this format:
-"REASONING: [Your step-by-step analysis of the maze, route planning, and movement calculations]"
+REASONING FORMAT - MANDATORY:
+You MUST provide detailed reasoning before generating commands. Follow this EXACT format:
+
+REASONING:
+STEP 1 - OBSERVATION:
+- Robot position: [describe where robot is and which way it's facing]
+- Exit location: [describe where the yellow exit is]
+- Boundaries: [describe black lines and obstacles]
+- Pathways: [describe available routes]
+
+STEP 2 - SPATIAL ANALYSIS:
+- Distance to exit: [rough estimate]
+- Direction needed: [which way robot needs to go]
+- Available paths: [describe possible routes]
+- Current facing: [robot's current orientation]
+
+STEP 3 - ROUTE PLANNING:
+- Planned sequence: [step-by-step movement plan]
+- Alternative routes: [other options considered]
+- Turn points: [where robot needs to turn]
+- Distance estimates: [rough measurements for each segment]
+
+STEP 4 - MOVEMENT CALCULATION:
+- Command 1: [action, speed, duration, reasoning]
+- Command 2: [action, speed, duration, reasoning]
+- Command 3: [action, speed, duration, reasoning]
+- Safety considerations: [any adjustments for safety]
+
+STEP 5 - VERIFICATION:
+- Route check: [verify this will reach the exit]
+- Safety check: [verify no boundary violations]
+- Calibration check: [verify speeds and durations are correct]
 
 SAFETY RULES:
 - Avoid black line boundaries
@@ -162,28 +191,48 @@ Example of correct response format:
                 print(f"📸 Image loaded: {len(image_data)} bytes, base64 length: {len(base64_image)}")
             
             # Create analysis prompt with boundary context if provided
-            analysis_prompt = """Look at this maze image. Find the robot (small vehicle) and the green exit area. Create a JSON array of movement commands to navigate from the robot to the green exit, avoiding black lines.
+            analysis_prompt = """Look at this maze image and follow the detailed 5-step reasoning process.
 
-Return ONLY this JSON format:
-[{{"action": "move_forward", "speed": 30, "duration": 1.0, "description": "Move forward 30cm"}}]
+STEP 1 - OBSERVATION: Find the robot (small vehicle) and the yellow exit area. Identify black line boundaries and available pathways.
 
-Do not include any other text, explanations, or analysis. Only return the JSON array."""
+STEP 2 - SPATIAL ANALYSIS: Calculate distances and determine the general direction needed.
+
+STEP 3 - ROUTE PLANNING: Think through the logical sequence of movements needed.
+
+STEP 4 - MOVEMENT CALCULATION: Convert your plan into specific movement commands using the calibration data.
+
+STEP 5 - VERIFICATION: Ensure the route will reach the exit safely.
+
+Provide your reasoning in the exact format specified in the instructions, then return the JSON array of movement commands.
+
+JSON format:
+[{{"action": "move_forward", "speed": 30, "duration": 1.0, "description": "Move forward 30cm"}}]"""
             
             if boundary_context:
                 analysis_prompt = f"""PREVIOUS ATTEMPT FAILED: {boundary_context}
 
-Look at this maze image again. Find the robot and green exit. Create a NEW JSON array of movement commands, avoiding the area where the boundary was hit.
+Look at this maze image again and follow the detailed 5-step reasoning process to create a NEW route.
 
-Return ONLY this JSON format:
-[{{"action": "move_forward", "speed": 20, "duration": 0.5, "description": "Move forward 15cm"}}]
+STEP 1 - OBSERVATION: Find the robot and yellow exit. Identify where the previous attempt failed and what boundaries to avoid.
 
-Do not include any other text. Only return the JSON array."""
+STEP 2 - SPATIAL ANALYSIS: Recalculate distances and determine a different approach.
+
+STEP 3 - ROUTE PLANNING: Plan an alternative route that avoids the failure point.
+
+STEP 4 - MOVEMENT CALCULATION: Convert your new plan into specific movement commands.
+
+STEP 5 - VERIFICATION: Ensure the new route will reach the exit safely without hitting boundaries.
+
+Provide your reasoning in the exact format specified in the instructions, then return the JSON array of movement commands.
+
+JSON format:
+[{{"action": "move_forward", "speed": 20, "duration": 0.5, "description": "Move forward 15cm"}}]"""
             
             # Create message with image for direct analysis
             messages = [
                 {
                     "role": "system",
-                    "content": "You are a maze navigation robot. Follow the chain-of-thought reasoning process, then provide your reasoning followed by a valid JSON array of movement commands. Format: REASONING: [your analysis] [JSON array]"
+                    "content": "You are a maze navigation robot. You MUST follow the detailed 5-step reasoning process exactly as specified in the instructions. Provide your reasoning in the exact format required, then provide a valid JSON array of movement commands. Do not skip any steps or provide abbreviated reasoning."
                 },
                 {
                     "role": "user",
