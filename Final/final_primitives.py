@@ -48,6 +48,15 @@ def set_motor_speed(motor_id: int, speed: int) -> None:
     px.set_motor_speed(motor_id, speed)
 
 def move_forward(speed: int, duration: float) -> None:
+    """
+    Move the robot forward at the specified speed for the given duration.
+    
+    Calibration: At speed 30, moving forward for 1 second goes approximately 30 centimeters.
+    
+    Args:
+        speed (int): Speed percentage from 0 to 100
+        duration (float): Duration in seconds
+    """
     global _servo_angles
     px = get_picarx()
     px.forward(speed)
@@ -63,7 +72,7 @@ def move_backward(speed: int, duration: float) -> None:
     px.stop()
     _servo_angles['dir_servo'] = 0
 
-def turn_left(angle: float, speed: int, duration: float) -> None:
+def turn_left(speed: int, duration: float) -> None:
     """Turn left in place using differential motor control with cali_dir_value."""
     global _servo_angles
     px = get_picarx()
@@ -77,7 +86,7 @@ def turn_left(angle: float, speed: int, duration: float) -> None:
     px.cali_dir_value = [1, 1]
     _servo_angles['dir_servo'] = 0
 
-def turn_right(angle: float, speed: int, duration: float) -> None:
+def turn_right(speed: int, duration: float) -> None:
     """Turn right in place using differential motor control with cali_dir_value."""
     global _servo_angles
     px = get_picarx()
