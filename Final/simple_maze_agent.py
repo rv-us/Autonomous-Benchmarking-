@@ -121,23 +121,29 @@ Example of correct response format:
                 print(f"📸 Image loaded: {len(image_data)} bytes, base64 length: {len(base64_image)}")
             
             # Create analysis prompt with boundary context if provided
-            analysis_prompt = "Analyze this maze image and return a JSON command list to navigate from the robot's current position to the green exit, avoiding black line boundaries."
+            analysis_prompt = """Look at this maze image. Find the robot (small vehicle) and the green exit area. Create a JSON array of movement commands to navigate from the robot to the green exit, avoiding black lines.
+
+Return ONLY this JSON format:
+[{"action": "move_forward", "speed": 30, "duration": 1.0, "description": "Move forward 30cm"}]
+
+Do not include any other text, explanations, or analysis. Only return the JSON array."""
             
             if boundary_context:
                 analysis_prompt = f"""PREVIOUS ATTEMPT FAILED: {boundary_context}
 
-Now analyze this maze image and return a NEW JSON command list to navigate from the robot's current position to the green exit, avoiding black line boundaries. 
+Look at this maze image again. Find the robot and green exit. Create a NEW JSON array of movement commands, avoiding the area where the boundary was hit.
 
-Learn from the previous failure and adjust your strategy:
-- Avoid the area where the boundary was hit
-- Use smaller, safer movements
-- Plan a different route
-- Consider the robot's current position after the failed attempt
+Return ONLY this JSON format:
+[{"action": "move_forward", "speed": 20, "duration": 0.5, "description": "Move forward 15cm"}]
 
-Return ONLY the JSON command array."""
+Do not include any other text. Only return the JSON array."""
             
             # Create message with image for direct analysis
             messages = [
+                {
+                    "role": "system",
+                    "content": "You are a maze navigation robot. You MUST respond with ONLY a valid JSON array of movement commands. Do not provide explanations, analysis, or any other text. Only return the JSON array."
+                },
                 {
                     "role": "user",
                     "content": [
