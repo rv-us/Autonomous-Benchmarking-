@@ -62,6 +62,7 @@ class SimpleMazeAgent:
         """Create the maze analysis agent."""
         return Agent(
             name="Maze Analysis Agent",
+            model="gpt-5",
             instructions="""You are a maze navigation specialist for a Picar-X robot. Your job is to analyze maze images and generate precise movement commands.
 
 MOVEMENT CALIBRATION (CRITICAL):
