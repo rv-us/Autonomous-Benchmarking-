@@ -147,7 +147,7 @@ STEP 1 - OBSERVATION:
 - Robot position: [robot is in bottom-left corner, facing UP (north)]
 - Exit location: [describe where the yellow highlighted exit is]
 - Blue arrow count: [count the total number of blue arrows from robot]
-- Blue arrow directions: [list each arrow's direction: Arrow 1 points X, Arrow 2 points Y, etc.]
+- Blue arrow directions: [carefully examine each arrow head direction: Arrow 1 points X, Arrow 2 points Y, etc. Look at the arrow head, not the path]
 - Boundaries: [describe black lines and obstacles]
 - Pathways: [describe available routes]
 
@@ -171,6 +171,7 @@ STEP 4 - MOVEMENT CALCULATION:
 - Safety considerations: [any adjustments for safety]
 
 STEP 5 - VERIFICATION:
+- Arrow verification: [double-check each arrow direction matches the generated commands]
 - Route check: [verify this will reach the exit]
 - Safety check: [verify no boundary violations]
 - Calibration check: [verify speeds and durations are correct]
@@ -204,7 +205,7 @@ Example of correct response format:
             # Create analysis prompt with boundary context if provided
             analysis_prompt = """Look at this maze image and follow the detailed 5-step reasoning process.
 
-STEP 1 - OBSERVATION: Find the robot (small vehicle) in the bottom-left corner facing UP, the yellow exit area in the top-left, and COUNT the BLUE ARROWS. Analyze the direction each blue arrow is pointing.
+STEP 1 - OBSERVATION: Find the robot (small vehicle) in the bottom-left corner facing UP, the yellow exit area in the top-left, and COUNT the BLUE ARROWS. Carefully analyze the direction each blue arrow is pointing - look at the arrow head direction, not just the general path.
 
 STEP 2 - SPATIAL ANALYSIS: Calculate distances and determine the general direction needed. Note that the robot is facing UP (north).
 
