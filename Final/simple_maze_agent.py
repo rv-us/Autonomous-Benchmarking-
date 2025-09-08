@@ -92,16 +92,19 @@ The robot car is positioned in the BOTTOM-LEFT corner of the maze, facing UP (no
 - The robot's rear (circuit board with lights) points toward the LEFT side of the image
 
 DIRECTIONAL REFERENCE (from robot's perspective):
-When the robot faces RIGHT (current position):
-- "RIGHT" for the robot = right of the image (east direction)
-- "LEFT" for the robot = left of the image (west direction)  
-- "FORWARD" for the robot = north of the image (north direction)
-- "BACKWARD" for the robot = south of the image (south direction)
+When the robot faces UP (current position):
+- "RIGHT" for the robot = RIGHT side of the image (east direction)
+- "LEFT" for the robot = LEFT side of the image (west direction)  
+- "FORWARD" for the robot = TOP of the image (north direction)
+- "BACKWARD" for the robot = BOTTOM of the image (south direction)
 
 NAVIGATION HINTS:
 - Look for BLUE ARROWS in the maze - these indicate the suggested escape route
-- The YELLOW HIGHLIGHTED area in the top-right corner is the exit
-- Follow the blue arrow path as a guide, but ensure it leads to the yellow exit
+- COUNT the number of blue arrows from the robot's starting position
+- ANALYZE the direction each blue arrow is pointing
+- The YELLOW HIGHLIGHTED area in the top-left corner is the exit
+- Use the blue arrow directions to generate movement commands
+- Each blue arrow represents a movement segment or turn
 
 ANALYSIS TASK - CHAIN OF THOUGHT REASONING:
 When you receive a maze image, follow this step-by-step reasoning process:
@@ -141,9 +144,10 @@ You MUST provide detailed reasoning before generating commands. Follow this EXAC
 
 REASONING:
 STEP 1 - OBSERVATION:
-- Robot position: [robot is in bottom-left corner, describe which way it's facing]
+- Robot position: [robot is in bottom-left corner, facing UP (north)]
 - Exit location: [describe where the yellow highlighted exit is]
-- Blue arrows: [describe the blue arrow path and where it leads]
+- Blue arrow count: [count the total number of blue arrows from robot]
+- Blue arrow directions: [list each arrow's direction: Arrow 1 points X, Arrow 2 points Y, etc.]
 - Boundaries: [describe black lines and obstacles]
 - Pathways: [describe available routes]
 
@@ -154,11 +158,11 @@ STEP 2 - SPATIAL ANALYSIS:
 - Current facing: [robot's current orientation]
 
 STEP 3 - ROUTE PLANNING:
-- Blue arrow path: [analyze the blue arrow route and where it leads]
-- Planned sequence: [step-by-step movement plan based on arrows and exit]
-- Alternative routes: [other options if blue arrows don't lead to exit]
-- Turn points: [where robot needs to turn following the path]
-- Distance estimates: [rough measurements for each segment]
+- Blue arrow sequence: [list the exact sequence of movements based on blue arrows]
+- Command mapping: [map each blue arrow direction to robot commands: Arrow 1 = move_forward, Arrow 2 = turn_left, etc.]
+- Planned sequence: [step-by-step movement plan following blue arrows]
+- Turn points: [where robot needs to turn based on arrow directions]
+- Distance estimates: [rough measurements for each segment based on arrow spacing]
 
 STEP 4 - MOVEMENT CALCULATION:
 - Command 1: [action, speed, duration, reasoning]
@@ -200,13 +204,13 @@ Example of correct response format:
             # Create analysis prompt with boundary context if provided
             analysis_prompt = """Look at this maze image and follow the detailed 5-step reasoning process.
 
-STEP 1 - OBSERVATION: Find the robot (small vehicle) in the bottom-left corner, the yellow exit area in the top-right, and the BLUE ARROWS that show the suggested path. Identify black line boundaries and available pathways.
+STEP 1 - OBSERVATION: Find the robot (small vehicle) in the bottom-left corner facing UP, the yellow exit area in the top-left, and COUNT the BLUE ARROWS. Analyze the direction each blue arrow is pointing.
 
-STEP 2 - SPATIAL ANALYSIS: Calculate distances and determine the general direction needed. Note that the robot is facing RIGHT (east).
+STEP 2 - SPATIAL ANALYSIS: Calculate distances and determine the general direction needed. Note that the robot is facing UP (north).
 
-STEP 3 - ROUTE PLANNING: Analyze the blue arrow path and think through the logical sequence of movements needed. The blue arrows may not lead directly to the yellow exit - plan accordingly.
+STEP 3 - ROUTE PLANNING: Use the blue arrows to create your movement sequence. Map each blue arrow direction to robot commands (move_forward, turn_left, turn_right).
 
-STEP 4 - MOVEMENT CALCULATION: Convert your plan into specific movement commands using the calibration data.
+STEP 4 - MOVEMENT CALCULATION: Convert the blue arrow sequence into specific movement commands using the calibration data.
 
 STEP 5 - VERIFICATION: Ensure the route will reach the yellow exit safely.
 
