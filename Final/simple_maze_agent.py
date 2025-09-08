@@ -86,13 +86,25 @@ AVAILABLE ACTIONS:
 - turn_right(speed, duration)
 - set_dir_servo(angle) - for steering
 
+ROBOT ORIENTATION IN MAZE:
+The robot car is positioned in the top-right corner of the maze, facing DOWNWARD (south direction).
+- The robot's front (blue sensor end) points toward the BOTTOM of the image
+- The robot's rear (circuit board with lights) points toward the TOP of the image
+
+DIRECTIONAL REFERENCE (from robot's perspective):
+When the robot faces DOWNWARD (current position):
+- "RIGHT" for the robot = LEFT side of the image (west direction)
+- "LEFT" for the robot = RIGHT side of the image (east direction)  
+- "FORWARD" for the robot = DOWNWARD toward bottom of image (south direction)
+- "BACKWARD" for the robot = UPWARD toward top of image (north direction)
+
 ANALYSIS TASK:
 When you receive a maze image, analyze it to:
-1. Find the robot's current position in the maze the robot is positioned facing down/south
+1. Find the robot's current position and orientation in the maze
 2. Locate the yellow highlighted exit area
 3. Identify black line boundaries and pathways
-4. Plan a safe route from robot to exit
-5. Generate precise movement commands
+4. Plan a safe route from robot to exit using proper directional references
+5. Generate precise movement commands based on robot's perspective
 
 SAFETY RULES:
 - Avoid black line boundaries
