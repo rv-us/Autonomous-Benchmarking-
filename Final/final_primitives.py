@@ -73,31 +73,43 @@ def move_backward(speed: int, duration: float) -> None:
     _servo_angles['dir_servo'] = 0
 
 def turn_left(speed: int, duration: float) -> None:
-    """Turn left in place using differential motor control with cali_dir_value."""
+    """Turn left in place using differential motor control with steering servo."""
     global _servo_angles
     px = get_picarx()
+    
+    # Set steering servo to maximum left for tightest turn
+    px.set_dir_servo_angle(-30)
+    _servo_angles['dir_servo'] = -30
     
     # Set motor directions for left turn: left motor backward, right motor forward
     px.cali_dir_value = [-1, 1]  # [left_motor, right_motor] -1=backward, 1=forward
     px.forward(speed)
     time.sleep(duration)
     px.stop()
-    # Reset motor directions to normal
+    
+    # Reset motor directions and steering to normal
     px.cali_dir_value = [1, 1]
+    px.set_dir_servo_angle(0)
     _servo_angles['dir_servo'] = 0
 
 def turn_right(speed: int, duration: float) -> None:
-    """Turn right in place using differential motor control with cali_dir_value."""
+    """Turn right in place using differential motor control with steering servo."""
     global _servo_angles
     px = get_picarx()
+    
+    # Set steering servo to maximum right for tightest turn
+    px.set_dir_servo_angle(30)
+    _servo_angles['dir_servo'] = 30
     
     # Set motor directions for right turn: left motor forward, right motor backward
     px.cali_dir_value = [1, -1]  # [left_motor, right_motor] -1=backward, 1=forward
     px.forward(speed)
     time.sleep(duration)
     px.stop()
-    # Reset motor directions to normal
+    
+    # Reset motor directions and steering to normal
     px.cali_dir_value = [1, 1]
+    px.set_dir_servo_angle(0)
     _servo_angles['dir_servo'] = 0
 
 def get_servo_angles() -> dict:
