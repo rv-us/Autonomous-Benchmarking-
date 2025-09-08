@@ -259,7 +259,15 @@ Do not include any other text. Only return the JSON array."""
                 finally:
                     # Stop monitoring after each command
                     self.stop_grayscale_monitoring()
-                    time.sleep(0.5)  # Brief pause between commands
+                    
+                    # Ensure robot is completely stopped
+                    try:
+                        stop()
+                    except:
+                        pass
+                    
+                    # Wait for command to fully complete
+                    time.sleep(1.0)  # Longer pause between commands
             
             return {
                 'success': not execution_state['boundary_hit'],
@@ -278,29 +286,42 @@ Do not include any other text. Only return the JSON array."""
             }
     
     def execute_single_command(self, command: Dict) -> str:
-        """Execute a single command."""
+        """Execute a single command with proper sequencing."""
         action = command.get('action')
         speed = command.get('speed', 30)
         duration = command.get('duration', 1.0)
         angle = command.get('angle', 0)
         
-        if action == 'move_forward':
-            move_forward(speed, duration)
-            return f"Moved forward at speed {speed} for {duration}s"
-        elif action == 'move_backward':
-            move_backward(speed, duration)
-            return f"Moved backward at speed {speed} for {duration}s"
-        elif action == 'turn_left':
-            turn_left(speed, duration)
-            return f"Turned left at speed {speed} for {duration}s"
-        elif action == 'turn_right':
-            turn_right(speed, duration)
-            return f"Turned right at speed {speed} for {duration}s"
-        elif action == 'set_dir_servo':
-            set_dir_servo(angle)
-            return f"Set steering servo to {angle} degrees"
-        else:
-            return f"Unknown action: {action}"
+        try:
+            # Ensure robot is stopped before starting new command
+            stop()
+            time.sleep(0.1)  # Brief pause to ensure stop is complete
+            
+            if action == 'move_forward':
+                move_forward(speed, duration)
+                return f"Moved forward at speed {speed} for {duration}s"
+            elif action == 'move_backward':
+                move_backward(speed, duration)
+                return f"Moved backward at speed {speed} for {duration}s"
+            elif action == 'turn_left':
+                turn_left(speed, duration)
+                return f"Turned left at speed {speed} for {duration}s"
+            elif action == 'turn_right':
+                turn_right(speed, duration)
+                return f"Turned right at speed {speed} for {duration}s"
+            elif action == 'set_dir_servo':
+                set_dir_servo(angle)
+                return f"Set steering servo to {angle} degrees"
+            else:
+                return f"Unknown action: {action}"
+                
+        except Exception as e:
+            # Ensure robot is stopped on error
+            try:
+                stop()
+            except:
+                pass
+            raise e
     
     def start_grayscale_monitoring(self):
         """Start grayscale monitoring for boundary detection."""
