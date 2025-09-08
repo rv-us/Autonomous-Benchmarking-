@@ -118,6 +118,7 @@ Example of correct response format:
             with open(image_path, "rb") as image_file:
                 image_data = image_file.read()
                 base64_image = base64.b64encode(image_data).decode("utf-8")
+                print(f"📸 Image loaded: {len(image_data)} bytes, base64 length: {len(base64_image)}")
             
             # Create analysis prompt with boundary context if provided
             analysis_prompt = "Analyze this maze image and return a JSON command list to navigate from the robot's current position to the green exit, avoiding black line boundaries."
@@ -153,14 +154,22 @@ Return ONLY the JSON command array."""
             ]
             
             # Send image directly to agent for analysis
-            result = Runner.run_sync(
-                self.maze_agent,
-                messages,
-                session=None  # Must be None for message lists
-            )
+            print(f"🚀 Sending request to OpenAI API...")
+            try:
+                result = Runner.run_sync(
+                    self.maze_agent,
+                    messages,
+                    session=None  # Must be None for message lists
+                )
+                print(f"✅ API call successful")
+            except Exception as api_error:
+                print(f"❌ API call failed: {api_error}")
+                return []
             
             # Debug: Print the raw response
-            print(f"🔍 Raw agent response: {result.final_output}")
+            print(f"🔍 Raw agent response: '{result.final_output}'")
+            print(f"🔍 Response type: {type(result.final_output)}")
+            print(f"🔍 Response length: {len(str(result.final_output))}")
             
             # Clean the response - remove any text before/after JSON
             response_text = result.final_output.strip()
