@@ -201,7 +201,7 @@ Do not include any other text. Only return the JSON array."""
             return []
     
     def execute_commands_with_monitoring(self, commands: List[Dict]) -> Dict:
-        """Execute command list with grayscale monitoring."""
+        """Execute command list with continuous grayscale monitoring like the examples."""
         try:
             print(f"🚀 Executing {len(commands)} commands with monitoring...")
             
@@ -215,12 +215,9 @@ Do not include any other text. Only return the JSON array."""
                 execution_state['boundary_hit'] = False
                 execution_state['last_action'] = command
                 
-                # Start monitoring for this command
-                self.start_grayscale_monitoring()
-                
                 try:
-                    # Execute the command
-                    result = self.execute_single_command(command)
+                    # Execute command with continuous monitoring (like cliff detection example)
+                    result = self.execute_command_with_continuous_monitoring(command)
                     
                     # Check if boundary was hit during execution
                     if execution_state['boundary_hit']:
@@ -257,17 +254,14 @@ Do not include any other text. Only return the JSON array."""
                     break
                 
                 finally:
-                    # Stop monitoring after each command
-                    self.stop_grayscale_monitoring()
-                    
                     # Ensure robot is completely stopped
                     try:
                         reset()
                     except:
                         pass
                     
-                    # Wait for command to fully complete
-                    time.sleep(1.0)  # Longer pause between commands
+                    # Wait between commands
+                    time.sleep(0.5)
             
             return {
                 'success': not execution_state['boundary_hit'],
@@ -284,6 +278,71 @@ Do not include any other text. Only return the JSON array."""
                 'error': str(e),
                 'execution_log': []
             }
+    
+    def execute_command_with_continuous_monitoring(self, command: Dict) -> str:
+        """Execute a single command with continuous grayscale monitoring like cliff detection example."""
+        action = command.get('action')
+        speed = command.get('speed', 30)
+        duration = command.get('duration', 1.0)
+        angle = command.get('angle', 0)
+        
+        try:
+            # Ensure robot is stopped before starting
+            reset()
+            time.sleep(0.1)
+            
+            # Get start time for duration tracking
+            start_time = time.time()
+            
+            # Start the movement based on action
+            if action == 'move_forward':
+                px = get_picarx()
+                px.forward(speed)
+            elif action == 'move_backward':
+                px = get_picarx()
+                px.backward(speed)
+            elif action == 'turn_left':
+                px = get_picarx()
+                px.set_dir_servo_angle(-30)  # Set steering for left turn
+                px.forward(speed)
+            elif action == 'turn_right':
+                px = get_picarx()
+                px.set_dir_servo_angle(30)   # Set steering for right turn
+                px.forward(speed)
+            elif action == 'set_dir_servo':
+                px = get_picarx()
+                px.set_dir_servo_angle(angle)
+                return f"Set steering servo to {angle} degrees"
+            else:
+                return f"Unknown action: {action}"
+            
+            # Continuous monitoring loop (like cliff detection example)
+            while time.time() - start_time < duration:
+                # Check grayscale sensors continuously
+                grayscale_values = get_grayscale()
+                black_line_threshold = 1000
+                
+                if any(value < black_line_threshold for value in grayscale_values):
+                    print("🚨 BLACK LINE DETECTED - BOUNDARY HIT!")
+                    execution_state['boundary_hit'] = True
+                    px.stop()
+                    return f"Boundary hit during {action}"
+                
+                # Small sleep to prevent overwhelming the system
+                time.sleep(0.05)  # 50ms check interval
+            
+            # Command completed successfully
+            px.stop()
+            return f"Completed {action} at speed {speed} for {duration}s"
+            
+        except Exception as e:
+            # Ensure robot is stopped on error
+            try:
+                px = get_picarx()
+                px.stop()
+            except:
+                pass
+            raise e
     
     def execute_single_command(self, command: Dict) -> str:
         """Execute a single command with proper sequencing."""
@@ -323,50 +382,8 @@ Do not include any other text. Only return the JSON array."""
                 pass
             raise e
     
-    def start_grayscale_monitoring(self):
-        """Start grayscale monitoring for boundary detection."""
-        global grayscale_thread, stop_grayscale_monitoring
-        
-        if grayscale_thread and grayscale_thread.is_alive():
-            return
-        
-        stop_grayscale_monitoring.clear()
-        
-        def monitor_grayscale():
-            """Monitor grayscale sensors for black line detection."""
-            while not stop_grayscale_monitoring.is_set():
-                try:
-                    grayscale_values = get_grayscale()
-                    
-                    # Check for black line detection
-                    black_line_threshold = 1000
-                    if any(value < black_line_threshold for value in grayscale_values):
-                        print("🚨 BLACK LINE DETECTED - BOUNDARY HIT!")
-                        execution_state['boundary_hit'] = True
-                        
-                        # Emergency stop
-                        try:
-                            reset()
-                        except:
-                            pass
-                        
-                        # Log boundary hit
-                        print(f"🚨 Boundary hit during action: {execution_state['last_action']}")
-                        break
-                    
-                    time.sleep(0.1)  # Check every 100ms
-                    
-                except Exception as e:
-                    print(f"⚠️ Grayscale monitoring error: {e}")
-                    time.sleep(0.5)
-        
-        grayscale_thread = threading.Thread(target=monitor_grayscale, daemon=True)
-        grayscale_thread.start()
-    
-    def stop_grayscale_monitoring(self):
-        """Stop grayscale monitoring."""
-        global stop_grayscale_monitoring
-        stop_grayscale_monitoring.set()
+    # Grayscale monitoring is now handled in execute_command_with_continuous_monitoring
+    # No separate threading needed - follows the cliff detection example pattern
     
     def store_attempt_result(self, attempt: int, commands: List[Dict], execution_result: Dict, context: str):
         """Store attempt result in memory for learning."""
