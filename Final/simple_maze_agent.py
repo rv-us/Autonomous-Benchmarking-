@@ -262,7 +262,7 @@ Do not include any other text. Only return the JSON array."""
                     
                     # Ensure robot is completely stopped
                     try:
-                        stop()
+                        reset()
                     except:
                         pass
                     
@@ -294,7 +294,7 @@ Do not include any other text. Only return the JSON array."""
         
         try:
             # Ensure robot is stopped before starting new command
-            stop()
+            reset()
             time.sleep(0.1)  # Brief pause to ensure stop is complete
             
             if action == 'move_forward':
@@ -318,7 +318,7 @@ Do not include any other text. Only return the JSON array."""
         except Exception as e:
             # Ensure robot is stopped on error
             try:
-                stop()
+                reset()
             except:
                 pass
             raise e
@@ -346,7 +346,7 @@ Do not include any other text. Only return the JSON array."""
                         
                         # Emergency stop
                         try:
-                            stop()
+                            reset()
                         except:
                             pass
                         
