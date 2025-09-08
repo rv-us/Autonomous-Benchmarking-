@@ -294,46 +294,63 @@ Do not include any other text. Only return the JSON array."""
             # Get start time for duration tracking
             start_time = time.time()
             
-            # Start the movement based on action
+            # Handle different actions
             if action == 'move_forward':
                 px = get_picarx()
                 px.forward(speed)
+                
+                # Continuous monitoring loop for forward movement
+                while time.time() - start_time < duration:
+                    grayscale_values = get_grayscale()
+                    black_line_threshold = 1000
+                    
+                    if any(value < black_line_threshold for value in grayscale_values):
+                        print("🚨 BLACK LINE DETECTED - BOUNDARY HIT!")
+                        execution_state['boundary_hit'] = True
+                        px.stop()
+                        return f"Boundary hit during {action}"
+                    
+                    time.sleep(0.05)  # 50ms check interval
+                
+                px.stop()
+                return f"Completed {action} at speed {speed} for {duration}s"
+                
             elif action == 'move_backward':
                 px = get_picarx()
                 px.backward(speed)
+                
+                # Continuous monitoring loop for backward movement
+                while time.time() - start_time < duration:
+                    grayscale_values = get_grayscale()
+                    black_line_threshold = 1000
+                    
+                    if any(value < black_line_threshold for value in grayscale_values):
+                        print("🚨 BLACK LINE DETECTED - BOUNDARY HIT!")
+                        execution_state['boundary_hit'] = True
+                        px.stop()
+                        return f"Boundary hit during {action}"
+                    
+                    time.sleep(0.05)  # 50ms check interval
+                
+                px.stop()
+                return f"Completed {action} at speed {speed} for {duration}s"
+                
             elif action == 'turn_left':
-                px = get_picarx()
-                px.set_dir_servo_angle(-30)  # Set steering for left turn
-                px.forward(speed)
+                # Use your in-place turn function (includes its own timing and monitoring)
+                turn_left(speed, duration)
+                return f"Turned left at speed {speed} for {duration}s"
+                
             elif action == 'turn_right':
-                px = get_picarx()
-                px.set_dir_servo_angle(30)   # Set steering for right turn
-                px.forward(speed)
+                # Use your in-place turn function (includes its own timing and monitoring)
+                turn_right(speed, duration)
+                return f"Turned right at speed {speed} for {duration}s"
+                
             elif action == 'set_dir_servo':
                 px = get_picarx()
                 px.set_dir_servo_angle(angle)
                 return f"Set steering servo to {angle} degrees"
             else:
                 return f"Unknown action: {action}"
-            
-            # Continuous monitoring loop (like cliff detection example)
-            while time.time() - start_time < duration:
-                # Check grayscale sensors continuously
-                grayscale_values = get_grayscale()
-                black_line_threshold = 1000
-                
-                if any(value < black_line_threshold for value in grayscale_values):
-                    print("🚨 BLACK LINE DETECTED - BOUNDARY HIT!")
-                    execution_state['boundary_hit'] = True
-                    px.stop()
-                    return f"Boundary hit during {action}"
-                
-                # Small sleep to prevent overwhelming the system
-                time.sleep(0.05)  # 50ms check interval
-            
-            # Command completed successfully
-            px.stop()
-            return f"Completed {action} at speed {speed} for {duration}s"
             
         except Exception as e:
             # Ensure robot is stopped on error
