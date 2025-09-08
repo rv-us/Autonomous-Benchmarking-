@@ -98,13 +98,42 @@ When the robot faces DOWNWARD (current position):
 - "FORWARD" for the robot = DOWNWARD toward bottom of image (south direction)
 - "BACKWARD" for the robot = UPWARD toward top of image (north direction)
 
-ANALYSIS TASK:
-When you receive a maze image, analyze it to:
+ANALYSIS TASK - CHAIN OF THOUGHT REASONING:
+When you receive a maze image, follow this step-by-step reasoning process:
+
+STEP 1 - OBSERVATION:
 1. Find the robot's current position and orientation in the maze
 2. Locate the yellow highlighted exit area
 3. Identify black line boundaries and pathways
-4. Plan a safe route from robot to exit using proper directional references
-5. Generate precise movement commands based on robot's perspective
+4. Note any obstacles or narrow passages
+
+STEP 2 - SPATIAL ANALYSIS:
+1. Calculate approximate distances from robot to exit
+2. Identify the general direction the robot needs to travel
+3. Map out the available pathways and dead ends
+4. Consider the robot's current facing direction
+
+STEP 3 - ROUTE PLANNING:
+1. Think through the logical sequence of movements needed
+2. Consider multiple possible routes and choose the safest
+3. Plan for turns and direction changes
+4. Estimate rough distances for each movement segment
+
+STEP 4 - MOVEMENT CALCULATION:
+1. Convert your planned route into specific movement commands
+2. Use the calibration data to calculate precise speeds and durations
+3. Consider the robot's perspective for left/right/forward/backward
+4. Add safety margins and conservative movements
+
+STEP 5 - COMMAND GENERATION:
+1. Generate the final JSON array of movement commands
+2. Ensure each command is properly calibrated
+3. Include descriptive text for each movement
+4. Verify the sequence will reach the exit safely
+
+REASONING FORMAT:
+Before generating commands, provide your reasoning in this format:
+"REASONING: [Your step-by-step analysis of the maze, route planning, and movement calculations]"
 
 SAFETY RULES:
 - Avoid black line boundaries
@@ -154,7 +183,7 @@ Do not include any other text. Only return the JSON array."""
             messages = [
                 {
                     "role": "system",
-                    "content": "You are a maze navigation robot. You MUST respond with ONLY a valid JSON array of movement commands. Do not provide explanations, analysis, or any other text. Only return the JSON array."
+                    "content": "You are a maze navigation robot. Follow the chain-of-thought reasoning process, then provide your reasoning followed by a valid JSON array of movement commands. Format: REASONING: [your analysis] [JSON array]"
                 },
                 {
                     "role": "user",
@@ -189,8 +218,20 @@ Do not include any other text. Only return the JSON array."""
             print(f"🔍 Response type: {type(result.final_output)}")
             print(f"🔍 Response length: {len(str(result.final_output))}")
             
-            # Clean the response - remove any text before/after JSON
+            # Clean the response
             response_text = result.final_output.strip()
+            
+            # Extract reasoning if present
+            reasoning_start = response_text.find('REASONING:')
+            if reasoning_start != -1:
+                reasoning_end = response_text.find('[', reasoning_start)
+                if reasoning_end != -1:
+                    reasoning = response_text[reasoning_start:reasoning_end].strip()
+                    print(f"🧠 REASONING: {reasoning}")
+                else:
+                    print("🧠 REASONING: Found reasoning marker but no JSON array")
+            else:
+                print("🧠 REASONING: No reasoning provided")
             
             # Try to find JSON array in the response
             json_start = response_text.find('[')
@@ -199,14 +240,17 @@ Do not include any other text. Only return the JSON array."""
             if json_start != -1 and json_end > json_start:
                 json_text = response_text[json_start:json_end]
                 print(f"🔍 Extracted JSON: {json_text}")
+                
+                try:
+                    commands = json.loads(json_text)
+                    print(f"📋 Generated {len(commands)} commands")
+                    return commands
+                except json.JSONDecodeError as json_error:
+                    print(f"❌ JSON parsing error: {json_error}")
+                    return []
             else:
                 print(f"❌ No JSON array found in response")
                 return []
-            
-            # Parse JSON response
-            commands = json.loads(json_text)
-            print(f"📋 Generated {len(commands)} commands")
-            return commands
             
         except Exception as e:
             print(f"❌ Error analyzing maze: {e}")
