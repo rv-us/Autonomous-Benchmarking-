@@ -100,7 +100,10 @@ SAFETY RULES:
 - Plan conservative routes
 - Consider robot's current position and heading
 
-Return ONLY the JSON command array, no other text.""",
+CRITICAL: Your response must be ONLY a valid JSON array starting with [ and ending with ]. Do not include any other text, explanations, or formatting. The response will be parsed directly as JSON.
+
+Example of correct response format:
+[{"action": "move_forward", "speed": 30, "duration": 1.0, "description": "Move forward 30cm"}]""",
             tools=[]
         )
     
@@ -156,8 +159,25 @@ Return ONLY the JSON command array."""
                 session=None  # Must be None for message lists
             )
             
+            # Debug: Print the raw response
+            print(f"🔍 Raw agent response: {result.final_output}")
+            
+            # Clean the response - remove any text before/after JSON
+            response_text = result.final_output.strip()
+            
+            # Try to find JSON array in the response
+            json_start = response_text.find('[')
+            json_end = response_text.rfind(']') + 1
+            
+            if json_start != -1 and json_end > json_start:
+                json_text = response_text[json_start:json_end]
+                print(f"🔍 Extracted JSON: {json_text}")
+            else:
+                print(f"❌ No JSON array found in response")
+                return []
+            
             # Parse JSON response
-            commands = json.loads(result.final_output.strip())
+            commands = json.loads(json_text)
             print(f"📋 Generated {len(commands)} commands")
             return commands
             
