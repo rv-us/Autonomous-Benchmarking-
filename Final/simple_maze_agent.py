@@ -87,16 +87,21 @@ AVAILABLE ACTIONS:
 - set_dir_servo(angle) - for steering
 
 ROBOT ORIENTATION IN MAZE:
-The robot car is positioned in the top-right corner of the maze, facing DOWNWARD (south direction).
-- The robot's front (blue sensor end) points toward the BOTTOM of the image
-- The robot's rear (circuit board with lights) points toward the TOP of the image
+The robot car is positioned in the BOTTOM-LEFT corner of the maze, facing UP (north direction).
+- The robot's front (sensor end) points toward the Top side of the image
+- The robot's rear (circuit board with lights) points toward the LEFT side of the image
 
 DIRECTIONAL REFERENCE (from robot's perspective):
-When the robot faces DOWNWARD (current position):
-- "RIGHT" for the robot = LEFT side of the image (west direction)
-- "LEFT" for the robot = RIGHT side of the image (east direction)  
-- "FORWARD" for the robot = DOWNWARD toward bottom of image (south direction)
-- "BACKWARD" for the robot = UPWARD toward top of image (north direction)
+When the robot faces RIGHT (current position):
+- "RIGHT" for the robot = right of the image (east direction)
+- "LEFT" for the robot = left of the image (west direction)  
+- "FORWARD" for the robot = north of the image (north direction)
+- "BACKWARD" for the robot = south of the image (south direction)
+
+NAVIGATION HINTS:
+- Look for BLUE ARROWS in the maze - these indicate the suggested escape route
+- The YELLOW HIGHLIGHTED area in the top-right corner is the exit
+- Follow the blue arrow path as a guide, but ensure it leads to the yellow exit
 
 ANALYSIS TASK - CHAIN OF THOUGHT REASONING:
 When you receive a maze image, follow this step-by-step reasoning process:
@@ -136,8 +141,9 @@ You MUST provide detailed reasoning before generating commands. Follow this EXAC
 
 REASONING:
 STEP 1 - OBSERVATION:
-- Robot position: [describe where robot is and which way it's facing]
-- Exit location: [describe where the yellow exit is]
+- Robot position: [robot is in bottom-left corner, describe which way it's facing]
+- Exit location: [describe where the yellow highlighted exit is]
+- Blue arrows: [describe the blue arrow path and where it leads]
 - Boundaries: [describe black lines and obstacles]
 - Pathways: [describe available routes]
 
@@ -148,9 +154,10 @@ STEP 2 - SPATIAL ANALYSIS:
 - Current facing: [robot's current orientation]
 
 STEP 3 - ROUTE PLANNING:
-- Planned sequence: [step-by-step movement plan]
-- Alternative routes: [other options considered]
-- Turn points: [where robot needs to turn]
+- Blue arrow path: [analyze the blue arrow route and where it leads]
+- Planned sequence: [step-by-step movement plan based on arrows and exit]
+- Alternative routes: [other options if blue arrows don't lead to exit]
+- Turn points: [where robot needs to turn following the path]
 - Distance estimates: [rough measurements for each segment]
 
 STEP 4 - MOVEMENT CALCULATION:
@@ -193,15 +200,15 @@ Example of correct response format:
             # Create analysis prompt with boundary context if provided
             analysis_prompt = """Look at this maze image and follow the detailed 5-step reasoning process.
 
-STEP 1 - OBSERVATION: Find the robot (small vehicle) and the yellow exit area. Identify black line boundaries and available pathways.
+STEP 1 - OBSERVATION: Find the robot (small vehicle) in the bottom-left corner, the yellow exit area in the top-right, and the BLUE ARROWS that show the suggested path. Identify black line boundaries and available pathways.
 
-STEP 2 - SPATIAL ANALYSIS: Calculate distances and determine the general direction needed.
+STEP 2 - SPATIAL ANALYSIS: Calculate distances and determine the general direction needed. Note that the robot is facing RIGHT (east).
 
-STEP 3 - ROUTE PLANNING: Think through the logical sequence of movements needed.
+STEP 3 - ROUTE PLANNING: Analyze the blue arrow path and think through the logical sequence of movements needed. The blue arrows may not lead directly to the yellow exit - plan accordingly.
 
 STEP 4 - MOVEMENT CALCULATION: Convert your plan into specific movement commands using the calibration data.
 
-STEP 5 - VERIFICATION: Ensure the route will reach the exit safely.
+STEP 5 - VERIFICATION: Ensure the route will reach the yellow exit safely.
 
 Provide your reasoning in the exact format specified in the instructions, then return the JSON array of movement commands.
 
