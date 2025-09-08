@@ -124,7 +124,7 @@ Example of correct response format:
             analysis_prompt = """Look at this maze image. Find the robot (small vehicle) and the green exit area. Create a JSON array of movement commands to navigate from the robot to the green exit, avoiding black lines.
 
 Return ONLY this JSON format:
-[{"action": "move_forward", "speed": 30, "duration": 1.0, "description": "Move forward 30cm"}]
+[{{"action": "move_forward", "speed": 30, "duration": 1.0, "description": "Move forward 30cm"}}]
 
 Do not include any other text, explanations, or analysis. Only return the JSON array."""
             
@@ -134,7 +134,7 @@ Do not include any other text, explanations, or analysis. Only return the JSON a
 Look at this maze image again. Find the robot and green exit. Create a NEW JSON array of movement commands, avoiding the area where the boundary was hit.
 
 Return ONLY this JSON format:
-[{"action": "move_forward", "speed": 20, "duration": 0.5, "description": "Move forward 15cm"}]
+[{{"action": "move_forward", "speed": 20, "duration": 0.5, "description": "Move forward 15cm"}}]
 
 Do not include any other text. Only return the JSON array."""
             
