@@ -88,8 +88,8 @@ AVAILABLE ACTIONS:
 
 ANALYSIS TASK:
 When you receive a maze image, analyze it to:
-1. Find the robot's current position in the maze
-2. Locate the green highlighted exit area
+1. Find the robot's current position in the maze the robot is positioned facing down/south
+2. Locate the yellow highlighted exit area
 3. Identify black line boundaries and pathways
 4. Plan a safe route from robot to exit
 5. Generate precise movement commands
