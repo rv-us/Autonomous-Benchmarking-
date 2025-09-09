@@ -420,7 +420,7 @@ JSON format:
                 # Continuous monitoring loop for forward movement
                 while time.time() - start_time < duration:
                     grayscale_values = get_grayscale()
-                    black_line_threshold = 1000
+                    black_line_threshold = 250
                     
                     if any(value < black_line_threshold for value in grayscale_values):
                         print("🚨 BLACK LINE DETECTED - BOUNDARY HIT!")
