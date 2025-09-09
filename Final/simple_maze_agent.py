@@ -189,6 +189,19 @@ SAFETY RULES:
 - Plan conservative routes
 - Consider robot's current position and heading
 
+BOUNDARY BEHAVIOR:
+- The robot will AUTOMATICALLY STOP if it hits a black line boundary
+- When a boundary is hit, the robot stops immediately and the attempt fails
+- The robot must be manually reset to the starting position for the next attempt
+
+COURSE CORRECTION STRATEGY:
+- If the robot hit a boundary during a "move_forward" command, reduce the duration for that movement in the next attempt
+- If the robot hit a boundary during a "turn_left" or "turn_right" command, the turn may be too sharp - consider adjusting the angle or using smaller movements
+- If the robot hit a boundary during "move_backward", reduce the duration or avoid that movement
+- Use the boundary context from the previous attempt to plan a safer route
+- Consider alternative paths that avoid the area where the boundary was hit
+- When in doubt, use smaller, more conservative movements
+
 CRITICAL: Your response must be ONLY a valid JSON array starting with [ and ending with ]. Do not include any other text, explanations, or formatting. The response will be parsed directly as JSON.
 
 Example of correct response format:
@@ -230,15 +243,23 @@ JSON format:
             if boundary_context:
                 analysis_prompt = f"""PREVIOUS ATTEMPT FAILED: {boundary_context}
 
+The robot automatically stopped when it hit a black line boundary. You must create a NEW route that avoids this failure point.
+
+COURSE CORRECTION INSTRUCTIONS:
+- If the failure was during "move_forward", reduce the duration for that movement (e.g., from 2.0s to 1.0s)
+- If the failure was during a turn, consider using smaller movements or a different approach
+- Plan a safer route that avoids the area where the boundary was hit
+- Use more conservative movements near boundaries
+
 Look at this maze image again and follow the detailed 5-step reasoning process to create a NEW route.
 
 STEP 1 - OBSERVATION: Find the robot and yellow exit. Identify where the previous attempt failed and what boundaries to avoid.
 
-STEP 2 - SPATIAL ANALYSIS: Recalculate distances and determine a different approach.
+STEP 2 - SPATIAL ANALYSIS: Recalculate distances and determine a different approach that avoids the failure point.
 
-STEP 3 - ROUTE PLANNING: Plan an alternative route that avoids the failure point.
+STEP 3 - ROUTE PLANNING: Plan an alternative route that avoids the failure point. Consider using smaller movements.
 
-STEP 4 - MOVEMENT CALCULATION: Convert your new plan into specific movement commands.
+STEP 4 - MOVEMENT CALCULATION: Convert your new plan into specific movement commands with reduced durations for safety.
 
 STEP 5 - VERIFICATION: Ensure the new route will reach the exit safely without hitting boundaries.
 
