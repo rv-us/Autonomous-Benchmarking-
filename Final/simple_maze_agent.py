@@ -71,6 +71,11 @@ MOVEMENT CALIBRATION (CRITICAL):
 - Speed 20 for 0.5 seconds = 15 centimeters forward
 - Speed 40 for 1.4 seconds = 60 degrees turn
 
+ROBOT DIMENSIONS:
+- The robot car is 30 centimeters long
+- Use this as a reference scale to estimate distances in the maze
+- When calculating movement distances, consider the robot's length for precise navigation
+
 COMMAND FORMAT:
 Return ONLY a JSON array of commands like this:
 [
@@ -420,7 +425,7 @@ JSON format:
                 # Continuous monitoring loop for forward movement
                 while time.time() - start_time < duration:
                     grayscale_values = get_grayscale()
-                    black_line_threshold = 125
+                    black_line_threshold = 200
                     
                     if any(value < black_line_threshold for value in grayscale_values):
                         print("🚨 BLACK LINE DETECTED - BOUNDARY HIT!")
