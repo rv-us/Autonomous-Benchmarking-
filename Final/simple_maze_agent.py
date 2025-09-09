@@ -67,7 +67,8 @@ class SimpleMazeAgent:
 
 MOVEMENT CALIBRATION (CRITICAL):
 - Speed 30 for 1 second = 30 centimeters forward
-- Speed 50 for 2.1 seconds = 90 degrees turn (left or right)
+- Speed 50 for 2.1 seconds = 90 degrees turn (right)
+- Speed 50 for 2.3 seconds = 90 degrees turn (left)
 - Speed 20 for 0.5 seconds = 15 centimeters forward
 - Speed 40 for 1.4 seconds = 60 degrees turn
 
