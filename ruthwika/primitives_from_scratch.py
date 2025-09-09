@@ -1,4 +1,4 @@
-# Attempt to implement primitives from scratch
+# First attempt to implement primitives
 from picarx import Picarx
 import time
 
