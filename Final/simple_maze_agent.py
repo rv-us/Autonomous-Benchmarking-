@@ -76,6 +76,7 @@ ROBOT DIMENSIONS:
 - The robot car is 30 centimeters long
 - Use this as a reference scale to estimate distances in the maze
 - When calculating movement distances, consider the robot's length for precise navigation
+- MANDATORY: Always subtract 20cm from all movement calculations due to robot length
 - IMPORTANT: The robot needs SPACE TO TURN - don't go all the way to boundaries
 - Even if maze is 80cm wide, don't move 60cm forward - leave 15-20cm buffer for turning
 - The robot moves forward slightly during turns, so account for this in distance calculations
@@ -85,8 +86,9 @@ MAZE DIMENSIONS (if provided in image):
 - Look for measurement labels in the maze image (e.g., "71 cm", "83 cm")
 - Use these measurements to calculate precise movement distances
 - Scale your movement commands based on the actual maze dimensions
+- MANDATORY: Subtract 20cm from all distance calculations due to robot length
 - SAFETY BUFFER: Always leave 15-20cm clearance from walls for turning space
-- If maze is 80cm wide, move maximum 50-55cm forward (not 60cm)
+- If maze is 80cm wide, move maximum 30-35cm forward (80cm - 20cm robot - 25cm buffer)
 - Account for robot's forward drift during turns when calculating distances
 - Dimensions are end-to-end of maze - don't use full width, leave turning room
 
@@ -160,8 +162,9 @@ STEP 4 - MOVEMENT CALCULATION:
 1. Convert your planned route into specific movement commands
 2. Use the calibration data to calculate precise speeds and durations
 3. Consider the robot's perspective for left/right/forward/backward
-4. SAFETY BUFFER: Leave 15-20cm clearance from walls for turning space
-5. Don't use full maze width - account for robot's turning radius and forward drift
+4. MANDATORY: Subtract 20cm from all distance calculations due to robot length
+5. SAFETY BUFFER: Leave 15-20cm clearance from walls for turning space
+6. Don't use full maze width - account for robot's turning radius and forward drift
 
 STEP 5 - COMMAND GENERATION:
 1. Generate the final JSON array of movement commands
@@ -199,6 +202,7 @@ STEP 4 - MOVEMENT CALCULATION:
 - Command 1: [action, speed, duration, reasoning]
 - Command 2: [action, speed, duration, reasoning]
 - Command 3: [action, speed, duration, reasoning]
+- Robot length adjustment: [subtract 20cm from all distance calculations]
 - Safety buffer: [leave 15-20cm clearance from walls for turning]
 - Distance calculations: [don't use full maze width, account for turning space]
 - Course correction: [if retry after boundary hit, reduce distance by minimum 15cm]
