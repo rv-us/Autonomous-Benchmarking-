@@ -1,5 +1,6 @@
 openai>=1.0.0
 openai-agents
+eval_type_backport
 picarx
 robot-hat
 vilib

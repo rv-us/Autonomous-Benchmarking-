@@ -68,7 +68,7 @@ class SimpleMazeAgent:
 MOVEMENT CALIBRATION (CRITICAL):
 - Speed 30 for 1 second = 30 centimeters forward
 - Speed 50 for 2.1 seconds = 90 degrees turn (right)
-- Speed 50 for 2.3 seconds = 90 degrees turn (left)
+- Speed 50 for 2.5 seconds = 90 degrees turn (left)
 - Speed 20 for 0.5 seconds = 15 centimeters forward
 - Speed 40 for 1.4 seconds = 60 degrees turn
 
@@ -119,6 +119,14 @@ NAVIGATION HINTS:
 - Use the blue arrow directions to generate movement commands
 - Each blue arrow represents a movement segment or turn
 
+MOVEMENT STRATEGY - KEEP IT SIMPLE:
+- Identify the MINIMUM number of moves required to escape
+- NO small adjustments or micro-movements
+- Each movement should be ONE complete action (either a full turn OR a full forward movement)
+- If an arrow points in a different direction than the robot is currently facing, the robot must TURN FIRST, then MOVE
+- Follow the blue arrows in sequence: each arrow = one movement command
+- Plan the most direct route with the fewest possible commands
+
 ANALYSIS TASK - CHAIN OF THOUGHT REASONING:
 When you receive a maze image, follow this step-by-step reasoning process:
 
@@ -135,10 +143,11 @@ STEP 2 - SPATIAL ANALYSIS:
 4. Consider the robot's current facing direction
 
 STEP 3 - ROUTE PLANNING:
-1. Think through the logical sequence of movements needed
-2. Consider multiple possible routes and choose the safest
-3. Plan for turns and direction changes
-4. Estimate rough distances for each movement segment
+1. Follow the blue arrows in sequence from robot to exit
+2. For each arrow, determine if robot needs to turn first before moving in that direction
+3. Plan the MINIMUM number of moves: each arrow = one command (turn OR move, not both)
+4. If arrow direction differs from robot's current facing, add a turn command first
+5. Keep movements simple and direct - no small adjustments
 
 STEP 4 - MOVEMENT CALCULATION:
 1. Convert your planned route into specific movement commands
@@ -173,10 +182,10 @@ STEP 2 - SPATIAL ANALYSIS:
 
 STEP 3 - ROUTE PLANNING:
 - Blue arrow sequence: [list the exact sequence of movements based on blue arrows]
-- Command mapping: [map each blue arrow direction to robot commands: Arrow 1 = move_forward, Arrow 2 = turn_left, etc.]
-- Planned sequence: [step-by-step movement plan following blue arrows]
-- Turn points: [where robot needs to turn based on arrow directions]
-- Distance estimates: [rough measurements for each segment based on arrow spacing]
+- Command mapping: [map each blue arrow to ONE command: Arrow 1 = move_forward, Arrow 2 = turn_right, etc.]
+- Turn-then-move logic: [if arrow points different direction than robot faces, add turn command first]
+- Minimum moves: [count total commands needed - should equal number of arrows]
+- Simple movements: [no small adjustments, each command is complete action]
 
 STEP 4 - MOVEMENT CALCULATION:
 - Command 1: [action, speed, duration, reasoning]
@@ -236,9 +245,9 @@ STEP 1 - OBSERVATION: Find the robot (small vehicle) in the bottom-left corner f
 
 STEP 2 - SPATIAL ANALYSIS: Calculate distances and determine the general direction needed. Note that the robot is facing UP (north).
 
-STEP 3 - ROUTE PLANNING: Use the blue arrows to create your movement sequence. Map each blue arrow direction to robot commands (move_forward, turn_left, turn_right).
+STEP 3 - ROUTE PLANNING: Follow the blue arrows in sequence. For each arrow, determine if robot needs to turn first before moving in that direction. Plan the MINIMUM number of moves - each arrow = one command.
 
-STEP 4 - MOVEMENT CALCULATION: Convert the blue arrow sequence into specific movement commands using the calibration data.
+STEP 4 - MOVEMENT CALCULATION: Convert the blue arrow sequence into specific movement commands. If an arrow points in a different direction than robot faces, add a turn command first, then the movement command.
 
 STEP 5 - VERIFICATION: Ensure the route will reach the yellow exit safely.
 
