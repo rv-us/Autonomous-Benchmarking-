@@ -67,8 +67,8 @@ class SimpleMazeAgent:
 
 MOVEMENT CALIBRATION (CRITICAL):
 - Speed 30 for 1 second = 30 centimeters forward
-- Speed 50 for 2.1 seconds = 90 degrees turn (right)
-- Speed 50 for 2.5 seconds = 90 degrees turn (left)
+- Speed 50 for 2.2 seconds = 90 degrees turn (right)
+- Speed 50 for 3.1 seconds = 90 degrees turn (left)
 - Speed 20 for 0.5 seconds = 15 centimeters forward
 - Speed 40 for 1.4 seconds = 60 degrees turn
 
@@ -81,6 +81,7 @@ MAZE DIMENSIONS (if provided in image):
 - Look for measurement labels in the maze image (e.g., "71 cm", "83 cm")
 - Use these measurements to calculate precise movement distances
 - Scale your movement commands based on the actual maze dimensions
+- keep in mind that the robot moves a little forward in the direction it is turning, and that the dimensions are end 2 end of the maze
 - If measurements are visible, use them to determine exact distances for each movement segment
 
 COMMAND FORMAT:
