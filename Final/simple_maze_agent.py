@@ -77,6 +77,12 @@ ROBOT DIMENSIONS:
 - Use this as a reference scale to estimate distances in the maze
 - When calculating movement distances, consider the robot's length for precise navigation
 
+MAZE DIMENSIONS (if provided in image):
+- Look for measurement labels in the maze image (e.g., "71 cm", "83 cm")
+- Use these measurements to calculate precise movement distances
+- Scale your movement commands based on the actual maze dimensions
+- If measurements are visible, use them to determine exact distances for each movement segment
+
 COMMAND FORMAT:
 Return ONLY a JSON array of commands like this:
 [
@@ -155,6 +161,7 @@ STEP 1 - OBSERVATION:
 - Exit location: [describe where the yellow highlighted exit is]
 - Blue arrow count: [count the total number of blue arrows from robot]
 - Blue arrow directions: [carefully examine each arrow head direction: Arrow 1 points X, Arrow 2 points Y, etc. Look at the arrow head, not the path]
+- Maze dimensions: [look for measurement labels like "x cm", "y cm" and note their positions]
 - Boundaries: [describe black lines and obstacles]
 - Pathways: [describe available routes]
 
@@ -225,7 +232,7 @@ Example of correct response format:
             # Create analysis prompt with boundary context if provided
             analysis_prompt = """Look at this maze image and follow the detailed 5-step reasoning process.
 
-STEP 1 - OBSERVATION: Find the robot (small vehicle) in the bottom-left corner facing UP, the yellow exit area in the top-left, and COUNT the BLUE ARROWS. Carefully analyze the direction each blue arrow is pointing - look at the arrow head direction, not just the general path.
+STEP 1 - OBSERVATION: Find the robot (small vehicle) in the bottom-left corner facing UP, the yellow exit area in the top-left, and COUNT the BLUE ARROWS. Look for any measurement labels like "x cm" or "y cm" that indicate maze dimensions. Carefully analyze the direction each blue arrow is pointing - look at the arrow head direction, not just the general path.
 
 STEP 2 - SPATIAL ANALYSIS: Calculate distances and determine the general direction needed. Note that the robot is facing UP (north).
 
