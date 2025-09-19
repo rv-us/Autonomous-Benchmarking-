@@ -75,15 +75,20 @@ MOVEMENT CALIBRATION (CRITICAL):
 ROBOT DIMENSIONS:
 - The robot car is 30 centimeters long
 - Use this as a reference scale to estimate distances in the maze
-- for refrence the even if the maze is 80 cm wide we don't need to move 60 cm forward maybe just 30 since turning nudges the robot forward and we are measuring from the front tires not the back.
 - When calculating movement distances, consider the robot's length for precise navigation
+- IMPORTANT: The robot needs SPACE TO TURN - don't go all the way to boundaries
+- Even if maze is 80cm wide, don't move 60cm forward - leave 15-20cm buffer for turning
+- The robot moves forward slightly during turns, so account for this in distance calculations
+- Always leave adequate clearance from walls and boundaries for safe turning
 
 MAZE DIMENSIONS (if provided in image):
 - Look for measurement labels in the maze image (e.g., "71 cm", "83 cm")
 - Use these measurements to calculate precise movement distances
 - Scale your movement commands based on the actual maze dimensions
-- keep in mind that the robot moves a little forward in the direction it is turning, and that the dimensions are end 2 end of the maze
-- If measurements are visible, use them to determine exact distances for each movement segment
+- SAFETY BUFFER: Always leave 15-20cm clearance from walls for turning space
+- If maze is 80cm wide, move maximum 50-55cm forward (not 60cm)
+- Account for robot's forward drift during turns when calculating distances
+- Dimensions are end-to-end of maze - don't use full width, leave turning room
 
 COMMAND FORMAT:
 Return ONLY a JSON array of commands like this:
@@ -155,7 +160,8 @@ STEP 4 - MOVEMENT CALCULATION:
 1. Convert your planned route into specific movement commands
 2. Use the calibration data to calculate precise speeds and durations
 3. Consider the robot's perspective for left/right/forward/backward
-4. Add safety margins and conservative movements
+4. SAFETY BUFFER: Leave 15-20cm clearance from walls for turning space
+5. Don't use full maze width - account for robot's turning radius and forward drift
 
 STEP 5 - COMMAND GENERATION:
 1. Generate the final JSON array of movement commands
@@ -193,7 +199,9 @@ STEP 4 - MOVEMENT CALCULATION:
 - Command 1: [action, speed, duration, reasoning]
 - Command 2: [action, speed, duration, reasoning]
 - Command 3: [action, speed, duration, reasoning]
-- Safety considerations: [any adjustments for safety]
+- Safety buffer: [leave 15-20cm clearance from walls for turning]
+- Distance calculations: [don't use full maze width, account for turning space]
+- Course correction: [if retry after boundary hit, reduce distance by minimum 15cm]
 
 STEP 5 - VERIFICATION:
 - Arrow verification: [double-check each arrow direction matches the generated commands]
@@ -213,9 +221,10 @@ BOUNDARY BEHAVIOR:
 - The robot must be manually reset to the starting position for the next attempt
 
 COURSE CORRECTION STRATEGY:
-- If the robot hit a boundary during a "move_forward" command, reduce the duration for that movement in the next attempt
+- If the robot hit a boundary during a "move_forward" command, reduce the duration by at least 15cm equivalent (0.5 seconds at speed 30)
 - If the robot hit a boundary during a "turn_left" or "turn_right" command, the turn may be too sharp - consider adjusting the angle or using smaller movements
-- If the robot hit a boundary during "move_backward", reduce the duration or avoid that movement
+- If the robot hit a boundary during "move_backward", reduce the duration by at least 15cm equivalent or avoid that movement
+- MANDATORY: When boundary hit during movement, reduce distance by minimum 15cm in next attempt
 - Use the boundary context from the previous attempt to plan a safer route
 - Consider alternative paths that avoid the area where the boundary was hit
 - When in doubt, use smaller, more conservative movements
@@ -264,8 +273,9 @@ JSON format:
 The robot automatically stopped when it hit a black line boundary. You must create a NEW route that avoids this failure point.
 
 COURSE CORRECTION INSTRUCTIONS:
-- If the failure was during "move_forward", reduce the duration for that movement (e.g., from 2.0s to 1.0s)
+- If the failure was during "move_forward", reduce the duration by at least 15cm equivalent (0.5 seconds at speed 30)
 - If the failure was during a turn, consider using smaller movements or a different approach
+- MANDATORY: Reduce movement distance by minimum 15cm when boundary was hit
 - Plan a safer route that avoids the area where the boundary was hit
 - Use more conservative movements near boundaries
 
