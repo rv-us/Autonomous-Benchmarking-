@@ -3,5 +3,4 @@ openai-agents
 picarx
 robot-hat
 vilib
-opencv-python
 numpy 
